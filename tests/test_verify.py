@@ -76,3 +76,19 @@ def test_check_chain_fails_on_interpenetration():
     report = check_chain([(a, 10 * _circle()), (b, 10 * _circle() + (2, 0, 0))])
     assert not report.ok
     assert any("interpenetrates" in f for f in report.failures())
+
+
+def test_check_chain_closed_adds_wraparound_adjacency():
+    """closed=True makes (first, last) adjacent: three disjoint tori in a row
+    must then fail with THREE 'not interlocked' pairs, including (0, 2)."""
+    items = [
+        (Pos(50 * i, 0, 0) * Torus(10, 1.5), 10 * _circle() + (50 * i, 0, 0))
+        for i in range(3)
+    ]
+    open_report = check_chain(items, closed=False)
+    closed_report = check_chain(items, closed=True)
+    open_failures = [f for f in open_report.failures() if "not interlocked" in f]
+    closed_failures = [f for f in closed_report.failures() if "not interlocked" in f]
+    assert len(open_failures) == 2   # (0,1), (1,2)
+    assert len(closed_failures) == 3  # + wraparound (0,2)
+    assert any("0,2" in f for f in closed_failures)

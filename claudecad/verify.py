@@ -124,7 +124,7 @@ def _bboxes_disjoint(a, b) -> bool:
     )
 
 
-def check_chain(items, closed: bool = False) -> ChainReport:
+def check_chain(items: Sequence[tuple], closed: bool = False) -> ChainReport:
     """Verify a chain of (solid, centerline_points) pairs.
 
     Adjacent = consecutive indices (+ wraparound when closed). Adjacent pairs
