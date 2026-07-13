@@ -21,7 +21,9 @@ signature V-groove. This upgrade adds both features.
 2026-07-13 after the spike gate; originally a periodic-spline sweep). The
 twist is modeled as the metal deforms: each point of the planar stadium
 centerline at position x along the link rotates about the link's long axis
-by phi(x) = twist_deg * (x / length), with x in [-length/2, +length/2] — a
+by phi(x) = twist_deg * x / (2 * x_max) with x_max = (length - wire_d)/2
+(the centerline's half-extent — matches the plan and code), x in
+[-x_max, +x_max] — a
 linear ramp through zero at the link center, reaching +-twist_deg/2 at the
 two ends, so the link stays symmetric.
 
@@ -105,8 +107,10 @@ sweep proves pathological in OCCT); direct solid twist deformation
   TWO nearest neighbors per side. Pairs within `interlock_depth` index
   distance (cyclic when closed) must be linked (|Lk| >= 1); pairs beyond it
   must be unlinked; ALL pairs must have zero intersection. depth=1
-  reproduces today's behavior exactly (existing tests unchanged); the dense
-  bracelet uses depth=2.
+  reproduces today's behavior exactly (existing tests unchanged). Note
+  (final): depth-2 regimes exist below pitch ~7.5 but proved structurally
+  infeasible for clearance; the shipped bracelet is depth 1. The parameter
+  remains for classification and future denser designs.
 
 ### `designs/cuban_bracelet/` (upgrade in place)
 - `params.py`: switch to `CubanLinkParams` (adds `TWIST_DEG` via the link
@@ -114,10 +118,22 @@ sweep proves pathological in OCCT); direct solid twist deformation
   combos) falsified the "pitch drops below 10" expectation: real Miami
   cubans run pitch ~= 0.49*length (same 50% overlap v1 shipped), and denser
   pitches structurally collide at the 2-apart pair for every proportion
-  tried. What the twist actually buys is FLAT LIE at that pitch: verified
-  passing config = v1 dims (20x14x4.1) at twist 60, pitch 10, tilt 20
-  (vs v1's tilt 34), all pairs zero-intersection, neighbors linked. The
-  diamond cut then supplies the facets.
+  tried. What the twist actually buys is FLAT LIE at that pitch.
+
+  **Chirality law (amended after Task 6; canonical detail in
+  `chains._link_bases`):** the twisted link is chiral, so a chain of
+  identical links under alternating +-tilt has TWO non-congruent junction
+  types; the 4-link probe that "verified" 20x14x4.1/twist 60/tilt 20 only
+  measured one of them, and the other interpenetrates ~119.5 mm^3. Chains
+  of chiral links MUST alternate link handedness (odd positions get the
+  XY-mirrored link), matching how real curb chains are assembled. Planar
+  (achiral) links are unaffected.
+
+  **Verified shipped config (full 190-pair closed-loop gate, both junction
+  types):** link 20x15x4.0, twist 45, tilt 30, pitch 10, CUT_Z 2.6,
+  n_sections 256, interlock depth 1 — all pairs zero-intersection,
+  neighbors linked; frontier grazes recorded in params.py. The diamond cut
+  then supplies the facets.
 - `build.py`: insert `diamond_cut` between `closed_loop` and `check_chain`.
 
 ## Verification & testing

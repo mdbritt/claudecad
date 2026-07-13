@@ -57,7 +57,7 @@ def test_cuban_link_volume_matches_tube_theorem():
     pts = twisted_centerline_points(p.length, p.width, p.wire_d, p.twist_deg, 4000)
     clen = float(np.linalg.norm(np.roll(pts, -1, axis=0) - pts, axis=1).sum())
     expected = math.pi * (p.wire_d / 2) ** 2 * clen
-    assert solid.volume == pytest.approx(expected, rel=5e-3)  # spike: <=0.05%
+    assert solid.volume == pytest.approx(expected, rel=5e-3)  # spike measured ~0.05%; asserted at 0.5% (10x margin)
 
 
 def test_cuban_link_is_boolean_robust_to_slab_cut():

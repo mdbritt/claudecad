@@ -19,7 +19,7 @@
 - `is_valid` is necessary but NOT sufficient — boolean-robustness is proven only by cut/intersection behavior (that is what the tests assert).
 - Verified parameter facts (2026-07-13 spike, 176 arc-placed probe combos + construction gauntlet):
   - ruled loft passes the full gauntlet for twist ∈ [20, 60], n_sections=144, vol_err ≤ 0.05%.
-  - Passing bracelet config: link 20×14×4.1, twist 60, pitch 10, tilt 20 — all pairs intersection 0, neighbors Lk=1, lk02=0 (interlock depth 1). Frontier: tilt 15 grazes (iv01=0.065), twist 45/tilt 20 grazes (iv01=0.015); slimmer proportions are uniformly worse.
+  - **[SUPERSEDED during Task 6 — chirality blind spot]** ~~Passing bracelet config: link 20×14×4.1, twist 60, pitch 10, tilt 20~~ — that probe only measured one of the two junction types of a chiral-link chain; the other interpenetrates ~119.5mm³. Final verified config (full 190-pair gate, chirality-alternating placement): link 20×15×4.0, twist 45, tilt 30, CUT_Z 2.6, n_sections 256 — see the spec's chirality law and params.py for the evidence trail.
   - Real-cuban pitch ≈ 0.49×length (photo-calibrated in Task 6); density below pitch≈9.5 structurally collides at the 2-apart pair for every proportion tried — do not chase it.
 - Escape hatch when a check fails during the benchmark: raise tilt 20→25 first, then lower twist toward 45, re-running the full gate each step; record final numbers in params.py comments. Never loosen a check.
 - Commit after every task with the message given in the task.
