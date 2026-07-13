@@ -144,6 +144,21 @@ def main() -> int:
     print(f"latch guard iv: {guard:.4f} (>0)")
     ok = ok and guard > 0.0
 
+    # pairwise clearance: every relieved local part vs every other (15
+    # pairs over the 6 relieved-local parts), plus the seated RELAXED
+    # relieved tongue against the relieved box -- all at the SHIPPED
+    # (relieved) geometry
+    names = list(parts_local)
+    worst_pair = 0.0
+    for i in range(len(names)):
+        for j in range(i + 1, len(names)):
+            worst_pair = max(worst_pair, intersection_volume(
+                parts_local[names[i]], parts_local[names[j]]))
+    seated = intersection_volume(tongue_r, parts_local["clasp_box"])
+    worst_pair = max(worst_pair, seated)
+    print(f"clasp pairwise worst iv: {worst_pair:.4f} (==0)")
+    ok = ok and worst_pair == 0.0
+
     # attachment linking: each placed lug bar must thread the nearest end
     # link (box lug faces -X after the flip -> last link; tongue -> first)
     loop_box, loop_tongue = (

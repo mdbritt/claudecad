@@ -164,6 +164,19 @@ def test_open_arc_preserves_original_parity():
         assert best < 1e-6
 
 
+def test_open_arc_preserves_chiral_parity():
+    """With CHIRAL links, arc links must be bit-identical (z-sign included)
+    to the same-index closed-loop links — catches any parity re-indexing."""
+    p = VERIFIED_CUBAN
+    closed, _ = closed_loop(p, target_circumference=200.0)
+    arc, _ = open_arc(p, target_circumference=200.0, gap_arc_length=27.0)
+    for pl in (arc[0], arc[-1]):
+        best = min(
+            float(np.abs(pl.centerline - cl.centerline).max()) for cl in closed
+        )
+        assert best < 1e-9
+
+
 def test_open_arc_verifies():
     p = ChainParams()
     arc, _ = open_arc(p, target_circumference=200.0, gap_arc_length=25.0)

@@ -64,6 +64,20 @@ class BoxClaspParams:
             raise ValueError(
                 f"blade longer than box: blade_l={self.blade_l} box_l={self.box_l}"
             )
+        # latch fuse guard: in clasp_latch, the arm's tip
+        # (x = _pin_axis ax - (latch_arm + _ARM_REACH_MARGIN)) must reach
+        # past the catch's near edge (catch_x_hi = -lug_l - 0.5) for arm
+        # and catch to genuinely overlap in X -- otherwise `arm + catch`
+        # unions into two disjoint pieces instead of one latch.
+        arm_tip_x = _pin_axis(self, +1)[0] - (self.latch_arm + _ARM_REACH_MARGIN)
+        catch_rear_x = -self.lug_l - 0.5
+        if arm_tip_x >= catch_rear_x:
+            raise ValueError(
+                f"latch_arm={self.latch_arm} too short to fuse the latch "
+                f"into one piece: arm tip x={arm_tip_x} does not clear "
+                f"catch rear x={catch_rear_x} (needs lug_l={self.lug_l} "
+                "smaller, or latch_arm larger)"
+            )
 
 
 def _centered_box(l, w, h):

@@ -82,6 +82,8 @@ def test_params_validation():
         BoxClaspParams(blade_w=14.0)  # blade wider than cavity
     with pytest.raises(ValueError):
         BoxClaspParams(wall=-1.0)
+    with pytest.raises(ValueError):
+        BoxClaspParams(latch_arm=4.0)  # too short to fuse arm+catch
 
 
 def test_assembly_parts_clean_and_clear():

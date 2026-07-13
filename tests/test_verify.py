@@ -2,7 +2,10 @@ import numpy as np
 import pytest
 from build123d import Box, Pos, Rot, Torus
 
-from claudecad.verify import ChainReport, SolidReport, check_chain, check_solid, intersection_volume, linking_number
+from claudecad.verify import (
+    ChainReport, SolidReport, check_chain, check_solid, intersection_volume,
+    linking_number, path_clearance,
+)
 
 
 def test_check_solid_valid_torus():
@@ -137,16 +140,13 @@ def test_interlock_depth_validation():
         check_chain(_hopf_tori(), interlock_depth=0)
 
 
-from claudecad.verify import path_clearance
-
-
 def test_path_clearance_reports_collision_profile():
     fixed = Box(10, 10, 10)                       # centered at origin
     moving = Pos(20, 0, 0) * Box(10, 10, 10)      # 10mm gap along X
     vols = path_clearance(moving, fixed, axis=(-1, 0, 0), distance=20, n=5)
     assert len(vols) == 5
     assert vols[0] == 0.0                          # untranslated: clear
-    assert vols[1] == 0.0                          # -5mm: faces touch, no volume
+    assert vols[1] == 0.0                          # -5mm: still a 5mm gap
     assert vols[2] == 0.0                          # -10mm: faces touch (no penetration yet)
     assert vols[3] == pytest.approx(500.0, rel=1e-6)  # -15mm: half overlap
     assert vols[4] == pytest.approx(1000.0, rel=1e-6)  # -20mm: coincident

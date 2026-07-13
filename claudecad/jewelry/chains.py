@@ -178,7 +178,7 @@ def open_arc(
     locs, parities = [], []
     for i in range(n):
         phi = 360 * i / n
-        # signed angular distance from the gap center at 0 deg
+        # unsigned cyclic angular distance from the gap center at 0 deg
         dist = min(phi, 360 - phi)
         if dist <= gap_half_deg:
             continue
