@@ -1,8 +1,25 @@
+import numpy as np
 import pytest
-from build123d import Box, Pos
+from build123d import Box, Pos, Rot
 
-from claudecad.jewelry.clasps import BoxClaspParams, clasp_box, clasp_tongue
-from claudecad.verify import check_solid, intersection_volume, path_clearance
+from claudecad.core.centerline import discretize
+from claudecad.jewelry.clasps import (
+    BoxClaspParams,
+    ClaspAssembly,
+    attachment_loop,
+    box_clasp,
+    clasp_box,
+    clasp_latch,
+    clasp_pin,
+    clasp_tongue,
+)
+from claudecad.jewelry.links import LinkParams, curb_link
+from claudecad.verify import (
+    check_solid,
+    intersection_volume,
+    linking_number,
+    path_clearance,
+)
 
 
 def test_box_and_tongue_are_clean_solids():
@@ -65,3 +82,52 @@ def test_params_validation():
         BoxClaspParams(blade_w=14.0)  # blade wider than cavity
     with pytest.raises(ValueError):
         BoxClaspParams(wall=-1.0)
+
+
+def test_assembly_parts_clean_and_clear():
+    asm = box_clasp(BoxClaspParams())
+    assert set(asm.parts) == {
+        "clasp_box", "clasp_tongue", "clasp_latch_l", "clasp_latch_r",
+        "clasp_pin_l", "clasp_pin_r",
+    }
+    for name, s in asm.parts.items():
+        assert check_solid(s).ok, name
+    names = list(asm.parts)
+    for i in range(len(names)):
+        for j in range(i + 1, len(names)):
+            iv = intersection_volume(asm.parts[names[i]], asm.parts[names[j]])
+            assert iv == 0.0, (names[i], names[j], iv)
+
+
+def test_latch_guards_extraction():
+    """With latches closed, even the compressed tongue cannot leave."""
+    p = BoxClaspParams()
+    asm = box_clasp(p)
+    guarded = Pos(-2.0, 0, 0) * asm.tongue_state("compressed")
+    hit = intersection_volume(guarded, asm.parts["clasp_latch_l"]) + \
+        intersection_volume(guarded, asm.parts["clasp_latch_r"])
+    assert hit > 0.0
+
+
+def test_pin_concentric_with_clearance():
+    p = BoxClaspParams()
+    latch = clasp_latch(p, +1)
+    pin = clasp_pin(p, +1)
+    assert intersection_volume(latch, pin) == 0.0   # radial clearance in bore
+
+
+def test_attachment_loop_links_end_link():
+    """A curb link hung on the box lug bar is topologically attached."""
+    p = BoxClaspParams()
+    loop = attachment_loop(p, "box")
+    assert loop.shape[1] == 3
+    # place a planar link so its opening wraps the bar: bar is at
+    # x ~ box_l + lug_l - bar_d/2 - 0.5, axis along Y
+    lp = LinkParams(length=20.0, width=15.0, wire_d=4.0)
+    _, wire = curb_link(lp)
+    bar_x = p.box_l + p.lug_l - p.bar_d / 2 - 0.5
+    link_curve = discretize(
+        Pos(bar_x + 10.0 - lp.wire_d, 0, 0) * Rot(Z=0) * wire, 256
+    )
+    lk = linking_number(loop, np.asarray(link_curve))
+    assert abs(round(lk)) == 1 and abs(lk - round(lk)) < 0.1

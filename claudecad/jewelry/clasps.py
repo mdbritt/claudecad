@@ -10,6 +10,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
+import numpy as np
 from build123d import Box, Cylinder, Pos, Rot, Solid
 
 
@@ -105,7 +106,34 @@ def clasp_box(p: BoxClaspParams) -> Solid:
     bar = Pos(p.box_l + p.lug_l - p.bar_d / 2 - 0.5, 0, 0) * Rot(X=90) * Cylinder(
         p.bar_d / 2, ear_gap + 2 * ear_w
     )
-    return body + bar
+    body = body + bar
+    # pivot ear bosses: solid pads that thicken each side wall LOCALLY at
+    # the pin axis, so the pin has real box material (not just the thin
+    # 0.8mm wall) to seat in. The boss's outer face stays flush with the
+    # box's existing outer Y face (bounding box unchanged -- see
+    # test_box_outer_dims_match_chain) and grows INWARD instead, into the
+    # slack between the cavity wall (box_w/2 - wall) and the tongue
+    # blade/leaf's half-width (blade_w/2): that slack always exists
+    # because __post_init__ requires blade_w + 2*clearance < cavity width.
+    # The bore overshoots outward into open air (harmless, nothing there to
+    # cut) and only slightly inward past the boss's own face (still well
+    # clear of the blade/leaf).
+    for side in (+1, -1):
+        ax, _, az = _pin_axis(p, side)
+        inner, outer = _boss_span(p, side)
+        boss_r = p.pin_d / 2 + p.clearance + _BOSS_COLLAR
+        bore_r = p.pin_d / 2 + p.clearance
+        boss_len = outer - inner
+        boss_center = side * (inner + outer) / 2
+        bore_lo = inner - _BOSS_BORE_OVERSHOOT
+        bore_hi = outer + _BOSS_BORE_OVERSHOOT
+        bore_center = side * (bore_lo + bore_hi) / 2
+        boss = Pos(ax, boss_center, az) * Rot(X=90) * Cylinder(boss_r, boss_len)
+        bore = Pos(ax, bore_center, az) * Rot(X=90) * Cylinder(
+            bore_r, bore_hi - bore_lo
+        )
+        body = body + boss - bore
+    return body
 
 
 def clasp_tongue(p: BoxClaspParams, state: str) -> Solid:
@@ -163,3 +191,180 @@ def clasp_tongue(p: BoxClaspParams, state: str) -> Solid:
         p.bar_d / 2, ear_gap + 2 * ear_w
     )
     return tongue + bar
+
+
+# --- latches, pins, attachment loops -----------------------------------
+#
+# _BOSS_D sizes how far the pivot ear boss thickens each side wall, grown
+# INWARD from the box's existing outer Y face into the slack between the
+# cavity wall and the tongue blade/leaf's half-width -- the box's outer
+# bounding box must stay exactly box_w (test_box_outer_dims_match_chain,
+# an already-passing Task 2 test), so the boss cannot protrude past it.
+# _BOSS_COLLAR is the extra radius around the pin bore so the boss stays
+# solid. _LATCH_GAP is a deliberate small air gap between the box's outer
+# face and the latch's inner face (avoids a coincident-face boolean
+# between two DIFFERENT parts that must show exactly zero intersection).
+# _BOSS_BORE_OVERSHOOT/_LATCH_BORE_OVERSHOOT lengthen a bore cut past a
+# part's own face for a clean through-cut, into open air (latch side, no
+# limit) or slightly into the cavity (box side, still clear of the
+# blade/leaf). _PIN_END_MARGIN / _PIN_INSET size the pin within its bores.
+_BOSS_D = 0.8
+_BOSS_COLLAR = 0.5
+_LATCH_GAP = 0.1
+_BOSS_BORE_OVERSHOOT = 0.3
+_LATCH_BORE_OVERSHOOT = 0.6
+_PIN_END_MARGIN = 0.3
+_PIN_INSET = 0.1
+
+
+def _pin_axis(p: BoxClaspParams, side: int):
+    """Shared pivot axis for the latch bore and pin, outboard of the box's
+    (flush) outer wall face, near the mouth, mid-height. Returns (x, y, z)
+    of the axis center; axis direction is Y."""
+    ax = 2.5
+    ay = side * (p.box_w / 2 + _LATCH_GAP + p.latch_t / 2)
+    return (ax, ay, 0.0)
+
+
+def _boss_span(p: BoxClaspParams, side: int):
+    """Magnitude Y-span (unsigned, both < box_w/2 or == box_w/2) of the
+    pivot ear boss added to clasp_box: outer_mag is flush with the box's
+    existing outer face; inner_mag extends into the cavity by _BOSS_D
+    beyond the cavity wall, staying clear of the tongue blade/leaf.
+    Multiply by `side` to place on the +Y or -Y wall."""
+    outer_mag = p.box_w / 2
+    inner_mag = outer_mag - p.wall - _BOSS_D
+    return inner_mag, outer_mag
+
+
+def clasp_latch(p: BoxClaspParams, side: int) -> Solid:
+    """U-flip latch, CLOSED position.
+
+    A thin arm pivots at the ear boss and crosses the box/tongue seam at
+    x=0. A Y-wide catch flange bridges inward from the arm to the tongue
+    lug ear's Y-span, positioned in X just past the ear's seated rear edge
+    (x < -lug_l) so it only fouls the ear once the tongue is pulled more
+    than ~2mm past seated -- that differential (clear when seated, blocked
+    when over-extracted) is the guard mechanism.
+    """
+    ax, ay, az = _pin_axis(p, side)
+
+    # arm: crosses the seam, connects the pivot (near ax) to the catch zone
+    arm_x_lo = -p.lug_l - 1.8
+    arm_x_hi = ax
+    arm = Pos((arm_x_lo + arm_x_hi) / 2, ay, az) * Box(
+        arm_x_hi - arm_x_lo, p.latch_t, p.latch_w
+    )
+
+    # catch: spans Y from inside the tongue lug ear's span (ear_gap/2 to
+    # ear_gap/2 + ear_w, see clasp_box/clasp_tongue) out to genuinely
+    # overlap the arm's inner face (real volume overlap, not edge-touching,
+    # so the union fuses into a single manifold piece).
+    ear_gap = 6.0  # matches clasp_box / clasp_tongue lug ear layout
+    catch_y_inner = side * (ear_gap / 2 + 1.0)
+    catch_y_outer = side * (abs(ay) - p.latch_t / 2 + 0.3)
+    catch_x_lo = -p.lug_l - 1.5
+    catch_x_hi = -p.lug_l - 0.5
+    catch = Pos(
+        (catch_x_lo + catch_x_hi) / 2,
+        (catch_y_inner + catch_y_outer) / 2,
+        az,
+    ) * Box(
+        catch_x_hi - catch_x_lo, abs(catch_y_outer - catch_y_inner), p.latch_w
+    )
+
+    latch = arm + catch
+    bore = Pos(ax, ay, az) * Rot(X=90) * Cylinder(
+        p.pin_d / 2 + p.clearance, p.latch_t + 2 * _LATCH_BORE_OVERSHOOT
+    )
+    return latch - bore
+
+
+def clasp_pin(p: BoxClaspParams, side: int) -> Solid:
+    """Pivot pin, concentric with the latch bore and the box ear boss bore
+    by construction (both built from the same _pin_axis / _boss_span).
+    Spans from just inside the boss (recessed off the cavity-side bore
+    overshoot) through the boss and latch bores to just past the latch's
+    outer face."""
+    ax, ay, az = _pin_axis(p, side)
+    boss_inner, _ = _boss_span(p, side)
+    y_lo = boss_inner + _PIN_INSET
+    y_hi = abs(ay) + p.latch_t / 2 + _PIN_END_MARGIN
+    center = side * (y_lo + y_hi) / 2
+    return Pos(ax, center, az) * Rot(X=90) * Cylinder(p.pin_d / 2, y_hi - y_lo)
+
+
+def attachment_loop(p: BoxClaspParams, end: str) -> np.ndarray:
+    """Closed centerline along the lug bar axis, returning through the lug
+    body -- the circuit an end link must thread.
+
+    A purely flat (z=0) rectangle here is topologically useless: an end
+    link built by curb_link also lies flat in z=0 (planar wire, "both
+    centered at the origin in the XY plane" per its docstring), and two
+    coplanar closed curves always have Lk=0 -- no in-plane translation of
+    either curve can change that (verified: shifting the test's link along
+    X keeps Lk exactly 0.0 at every offset). The loop must leave the
+    plane. It dips through z=0 exactly ONCE under the bar (a single clean
+    crossing at the bar's own x, where an end link resting flat over the
+    bar would be) and dips back a second time at the far end of the
+    return leg, deep inside the box/tongue body and outside any real end
+    link's footprint -- so that crossing doesn't also land inside a link's
+    hole and cancel the first one (two crossings under the SAME hole net
+    to Lk=0, exactly like the flat rectangle; see task-3-report.md).
+    """
+    if end == "box":
+        bx = p.box_l + p.lug_l - p.bar_d / 2 - 0.5
+        rx = p.box_l - 2.0            # return leg inside the box rear
+    elif end == "tongue":
+        bx = -p.lug_l + p.bar_d / 2 + 0.5
+        rx = 2.0                       # return leg inside the tongue web
+    else:
+        raise ValueError(f"end must be 'box' or 'tongue', got {end!r}")
+    half_y = 5.0
+    dz = 1.0
+    corners = [
+        (bx, -half_y, -dz),   # bar start, below the link's plane
+        (bx, +half_y, +dz),   # bar end, above the link's plane -- the
+                               # single clean crossing is mid-edge, at
+                               # (bx, 0, 0), under the bar
+        (rx, +half_y, +dz),   # into the return leg, still above
+        (rx, -half_y, +dz),   # across the return leg, still above
+        (rx, -half_y, -dz),   # back down -- crossing #2, at x=rx, far
+                               # from any end link's hole
+    ]
+    pts = []
+    n_edge = 32
+    n = len(corners)
+    for k in range(n):
+        a = np.array(corners[k], float)
+        b = np.array(corners[(k + 1) % n], float)
+        for i in range(n_edge):
+            pts.append(a + (b - a) * i / n_edge)
+    return np.array(pts)
+
+
+@dataclass(frozen=True)
+class ClaspAssembly:
+    parts: dict
+    insertion_axis: tuple
+    attachment_loops: tuple
+    _params: BoxClaspParams
+
+    def tongue_state(self, state: str) -> Solid:
+        return clasp_tongue(self._params, state)
+
+
+def box_clasp(p: BoxClaspParams) -> ClaspAssembly:
+    return ClaspAssembly(
+        parts={
+            "clasp_box": clasp_box(p),
+            "clasp_tongue": clasp_tongue(p, "relaxed"),
+            "clasp_latch_l": clasp_latch(p, +1),
+            "clasp_latch_r": clasp_latch(p, -1),
+            "clasp_pin_l": clasp_pin(p, +1),
+            "clasp_pin_r": clasp_pin(p, -1),
+        },
+        insertion_axis=(1.0, 0.0, 0.0),
+        attachment_loops=(attachment_loop(p, "box"), attachment_loop(p, "tongue")),
+        _params=p,
+    )
