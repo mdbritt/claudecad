@@ -41,3 +41,12 @@ verifies, writes GLB/STEP to `out/`). The library is `claudecad/`
 `/Applications/Blender 4.5 LTS.app/Contents/MacOS/Blender`, override with
 env `BLENDER_BIN`. Views: persp, top, front, detail. Bump `--samples` or
 `--res` for beauty shots.
+
+## Quick STEP viewing
+
+`tools/step_viewer/` is a self-contained browser STEP viewer (Online3DViewer +
+occt-import-js WASM, vendored by `tools/step_viewer/fetch_libs.sh` — run it
+once per clone). Serve the repo root on port 8123 (`python3 -m http.server
+8123 --directory .` — the port is baked into the vendored engine patch) and
+open `http://localhost:8123/tools/step_viewer/?model=/out/step/<name>.step`.
+Drag-and-drop of .step/.glb files also works.
