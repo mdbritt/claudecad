@@ -1,6 +1,7 @@
 """Chain assemblies built from links. Pure geometry: params in, placed solids out."""
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import NamedTuple
 
@@ -50,3 +51,44 @@ def straight_chain(p: ChainParams, count: int) -> list[PlacedLink]:
             PlacedLink(loc * base_solid, discretize(loc * base_wire, p.link.n_centerline))
         )
     return placed
+
+
+@dataclass(frozen=True)
+class LoopInfo:
+    """Derived (read-only) values of a closed loop."""
+
+    count: int
+    radius: float
+    circumference: float
+
+
+def closed_loop(
+    p: ChainParams, target_circumference: float
+) -> tuple[list[PlacedLink], LoopInfo]:
+    """Closed bracelet: links around a circle in XY, faces up +/-Z.
+
+    Link count = target_circumference/pitch rounded to the nearest even
+    integer (odd counts cannot close an alternating +/-tilt pattern); the
+    actual radius is then count*pitch / 2*pi, so the realized circumference
+    tracks the pitch exactly and the target approximately.
+    """
+    n = round(target_circumference / p.pitch)
+    if n % 2:
+        n += 1
+    if n < 4:
+        raise ValueError(
+            f"loop needs >=4 links, got {n} from "
+            f"target_circumference={target_circumference} pitch={p.pitch}"
+        )
+    radius = n * p.pitch / (2 * math.pi)
+    base_solid, base_wire = curb_link(p.link)
+    placed = []
+    for i in range(n):
+        tilt = p.tilt_deg if i % 2 == 0 else -p.tilt_deg
+        # at angle 0 the link sits at (0,-radius) with its long axis (X)
+        # along the circle tangent; Rot(Z) walks it around the loop
+        loc = Rot(Z=360 * i / n) * Pos(0, -radius, 0) * Rot(X=tilt)
+        placed.append(
+            PlacedLink(loc * base_solid, discretize(loc * base_wire, p.link.n_centerline))
+        )
+    return placed, LoopInfo(count=n, radius=radius, circumference=n * p.pitch)

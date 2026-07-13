@@ -1,6 +1,9 @@
+import math
+
+import numpy as np
 import pytest
 
-from claudecad.jewelry.chains import ChainParams, PlacedLink, straight_chain
+from claudecad.jewelry.chains import ChainParams, LoopInfo, PlacedLink, closed_loop, straight_chain
 from claudecad.verify import check_chain
 
 
@@ -21,4 +24,30 @@ def test_straight_chain_spacing():
 def test_straight_chain_verifies():
     """The core benchmark property: interlocked, untouching, only neighbors linked."""
     report = check_chain(straight_chain(ChainParams(), count=4))
+    assert report.ok, report.summary()
+
+
+def test_closed_loop_derived_values():
+    p = ChainParams()
+    links, info = closed_loop(p, target_circumference=200.0)
+    assert isinstance(info, LoopInfo)
+    assert info.count % 2 == 0
+    assert info.count == round(200.0 / p.pitch) or info.count == round(200.0 / p.pitch) + 1
+    assert info.circumference == pytest.approx(info.count * p.pitch)
+    assert info.radius == pytest.approx(info.circumference / (2 * math.pi))
+    assert len(links) == info.count
+
+
+def test_closed_loop_links_lie_on_circle():
+    links, info = closed_loop(ChainParams(), target_circumference=200.0)
+    for pl in links:
+        center = pl.centerline.mean(axis=0)
+        assert np.hypot(center[0], center[1]) == pytest.approx(info.radius, rel=0.02)
+
+
+def test_closed_loop_verifies_including_wraparound():
+    """Benchmark property on the full bracelet: every neighbor pair (incl.
+    last-first) interlocked, zero interpenetration anywhere."""
+    links, _ = closed_loop(ChainParams(), target_circumference=200.0)
+    report = check_chain(links, closed=True)
     assert report.ok, report.summary()
