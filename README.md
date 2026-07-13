@@ -59,7 +59,8 @@ The repo ships a project skill (`.claude/skills/cad/SKILL.md`) that teaches
 Claude the loop and its non-negotiable rules (mm-only params, never render
 unverified geometry, never weaken a check, constructed-state mechanism
 proofs). Open the repo in Claude Code and ask for a design; the skill does
-the rest. Start a new piece from `designs/_template/`.
+the rest. Start a new piece from `designs/_template/` — the step-by-step
+guide is [docs/new-design-recipe.md](docs/new-design-recipe.md).
 
 ## What's here
 
