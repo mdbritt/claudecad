@@ -44,7 +44,10 @@ brushed texture, invisible at bracelet scale; n_sections is a quality dial.
 
 - Interlock verification is unchanged: the Gauss linking number consumes the
   discretized twisted centerline directly.
-- twist_deg = 0 must reproduce the planar curb link within tolerance (test).
+- The twist map at twist_deg = 0 must reproduce the planar stadium
+  centerline within tolerance (test at the centerline level; the SOLID
+  builder validates twist_deg to [20, 60], so planar solids remain
+  `curb_link`'s job).
 - Volume ~= pi * (wire_d/2)^2 * curve_length remains a test invariant.
 
 **Diamond-cut at chain level.** After assembly (straight or closed loop),
@@ -99,9 +102,14 @@ sweep proves pathological in OCCT); direct solid twist deformation
 
 ### `designs/cuban_bracelet/` (upgrade in place)
 - `params.py`: switch to `CubanLinkParams` (adds `TWIST_DEG` via the link
-  params) and add `CUT_Z`. Same probe-then-verify workflow to find the new
-  frontier — with twist, pitch should drop below 10 and tilt toward flat;
-  the gate decides.
+  params) and add `CUT_Z`. Frontier probing (2026-07-13, 176 arc-placed
+  combos) falsified the "pitch drops below 10" expectation: real Miami
+  cubans run pitch ~= 0.49*length (same 50% overlap v1 shipped), and denser
+  pitches structurally collide at the 2-apart pair for every proportion
+  tried. What the twist actually buys is FLAT LIE at that pitch: verified
+  passing config = v1 dims (20x14x4.1) at twist 60, pitch 10, tilt 20
+  (vs v1's tilt 34), all pairs zero-intersection, neighbors linked. The
+  diamond cut then supplies the facets.
 - `build.py`: insert `diamond_cut` between `closed_loop` and `check_chain`.
 
 ## Verification & testing
