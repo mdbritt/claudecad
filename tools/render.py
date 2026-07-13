@@ -4,7 +4,6 @@ from __future__ import annotations
 import argparse
 import os
 import subprocess
-import sys
 from pathlib import Path
 
 DEFAULT_BLENDER = "/Applications/Blender 4.5 LTS.app/Contents/MacOS/Blender"
@@ -24,13 +23,16 @@ def render_glb(
         raise FileNotFoundError(glb_path)
     outdir.mkdir(parents=True, exist_ok=True)
     blender = os.environ.get("BLENDER_BIN", DEFAULT_BLENDER)
+    written = [outdir / f"{v}.png" for v in views]
+    for p in written:
+        p.unlink(missing_ok=True)
     cmd = [
-        blender, "-b", "-P", str(SCENE_SCRIPT), "--",
+        blender, "--factory-startup", "-b", "--python-exit-code", "1",
+        "-P", str(SCENE_SCRIPT), "--",
         str(glb_path), str(outdir), ",".join(views),
         f"{res[0]}x{res[1]}", str(samples),
     ]
     proc = subprocess.run(cmd, capture_output=True, text=True)
-    written = [outdir / f"{v}.png" for v in views]
     missing = [p for p in written if not p.exists() or p.stat().st_size == 0]
     if proc.returncode != 0 or missing:
         tail = "\n".join((proc.stderr or proc.stdout).splitlines()[-25:])

@@ -88,6 +88,7 @@ scene.cycles.samples = samples
 scene.cycles.use_denoising = True
 scene.render.resolution_x = res_x
 scene.render.resolution_y = res_y
+scene.render.image_settings.file_format = "PNG"
 
 VIEW_DIRS = {
     "persp": mathutils.Vector((1.0, -1.0, 0.7)),
