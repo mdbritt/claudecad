@@ -1,9 +1,19 @@
 """End-to-end render smoke test. Runs real Blender headlessly (~30-60s)."""
+import os
+import shutil
+from pathlib import Path
+
 import pytest
 from build123d import Torus
 
 from tools.export import export_glb
-from tools.render import render_glb
+from tools.render import DEFAULT_BLENDER, render_glb
+
+_blender = os.environ.get("BLENDER_BIN", DEFAULT_BLENDER)
+pytestmark = pytest.mark.skipif(
+    not (Path(_blender).exists() or shutil.which(_blender)),
+    reason="Blender not available (set BLENDER_BIN); render loop is optional",
+)
 
 
 def test_render_torus(tmp_path):

@@ -4,6 +4,8 @@ version = "0.1.0"
 description = "Claude Code-driven parametric CAD design system"
 requires-python = ">=3.12"
 dependencies = ["build123d>=0.11,<0.12", "numpy>=1.26"]
+license = "Apache-2.0"
+authors = [{ name = "Mike Britt" }]
 
 [dependency-groups]
 dev = ["pytest>=8"]
