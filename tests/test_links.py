@@ -38,3 +38,5 @@ def test_link_params_validation():
         LinkParams(length=-4.0, width=-14.0, wire_d=-20.0)  # all negative
     with pytest.raises(ValueError):
         LinkParams(length=14.0, width=14.0, wire_d=4.0)  # width == length boundary
+    with pytest.raises(ValueError):
+        LinkParams(n_centerline=2)

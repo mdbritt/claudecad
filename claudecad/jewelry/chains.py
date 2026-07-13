@@ -34,6 +34,10 @@ class ChainParams:
     tilt_deg: float = 55.0
     pitch: float = 10.0
 
+    def __post_init__(self):
+        if self.pitch <= 0:
+            raise ValueError(f"need pitch > 0, got pitch={self.pitch}")
+
 
 class PlacedLink(NamedTuple):
     solid: Solid

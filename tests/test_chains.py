@@ -32,7 +32,7 @@ def test_closed_loop_derived_values():
     links, info = closed_loop(p, target_circumference=200.0)
     assert isinstance(info, LoopInfo)
     assert info.count % 2 == 0
-    assert info.count == round(200.0 / p.pitch) or info.count == round(200.0 / p.pitch) + 1
+    assert info.count == 20
     assert info.circumference == pytest.approx(info.count * p.pitch)
     assert info.radius == pytest.approx(info.circumference / (2 * math.pi))
     assert len(links) == info.count
@@ -71,3 +71,10 @@ def test_closed_loop_too_few_links_raises():
         closed_loop(ChainParams(), target_circumference=20.0)  # x = 2 -> n = 2
     msg = str(exc.value)
     assert "20.0" in msg and "10.0" in msg  # values present in message
+
+
+def test_chain_params_validation():
+    with pytest.raises(ValueError):
+        ChainParams(pitch=0.0)
+    with pytest.raises(ValueError):
+        ChainParams(pitch=-10.0)

@@ -23,6 +23,8 @@ class LinkParams:
                 f"need 0 < wire_d < width < length, got "
                 f"wire_d={self.wire_d} width={self.width} length={self.length}"
             )
+        if self.n_centerline < 3:
+            raise ValueError(f"need n_centerline >= 3, got {self.n_centerline}")
 
     @property
     def end_radius(self) -> float:
