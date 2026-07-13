@@ -17,3 +17,9 @@ packages = ["claudecad"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+filterwarnings = [
+    "error",
+    # upstream build123d dependency (lib3mf) emits ctypes DeprecationWarnings
+    # on Python 3.13+; not ours to fix, tracked since v1
+    "ignore::DeprecationWarning:lib3mf",
+]
