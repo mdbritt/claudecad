@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import NamedTuple
 
 import numpy as np
-from build123d import Pos, Rot, Solid, Wire
+from build123d import Plane, Pos, Rot, Solid, Wire, mirror
 
 from claudecad.core.centerline import discretize
 from claudecad.jewelry.links import CubanLinkParams, LinkParams, cuban_link, curb_link
@@ -21,10 +21,43 @@ def build_link(params: LinkParams | CubanLinkParams) -> tuple[Solid, Wire]:
     raise TypeError(f"unknown link params type: {type(params).__name__}")
 
 
-def _place_links(base_solid, base_wire, locs, n_centerline) -> list[PlacedLink]:
+def _link_bases(params) -> tuple[tuple[Solid, Wire], tuple[Solid, Wire]]:
+    """(even, odd) base geometry for alternating-tilt placement.
+
+    Chiral links (twisted cubans) must alternate handedness: with identical
+    chiral links, the (+tilt,-tilt) junction and the (-tilt,+tilt) junction
+    are NOT congruent (no link symmetry maps one to the other), and the
+    second junction type fails — at the 2026-07-13 bracelet config every
+    (odd,even) neighbor pair interpenetrated by an identical 119.531 mm^3
+    with Lk=0 while every (even,odd) pair was clean (first caught by the
+    full 20-link closed-loop gate; the 4-link probe only ever measured the
+    (0,1) junction). Mirroring odd links through their local XY plane makes
+    the two junction types mirror images of each other, hence congruent —
+    measured identical intersection volumes on the real arc. Physically this
+    is how Miami cubans are made: pressing a curb chain flat imparts
+    opposite twist to alternately-oriented links.
+
+    Achiral links (planar curbs) are Rot(X=180)-symmetric, so both junction
+    types were already congruent; they keep a single base.
+    """
+    base = build_link(params)
+    if isinstance(params, CubanLinkParams):
+        # mirror() returns a Curve compound for 1D input; rewrap as Wire so
+        # downstream discretize() keeps working
+        return base, (
+            mirror(base[0], about=Plane.XY),
+            Wire(mirror(base[1], about=Plane.XY).edges()),
+        )
+    return base, base
+
+
+def _place_links(bases, locs, n_centerline) -> list[PlacedLink]:
     return [
-        PlacedLink(loc * base_solid, discretize(loc * base_wire, n_centerline))
-        for loc in locs
+        PlacedLink(
+            loc * bases[i % 2][0],
+            discretize(loc * bases[i % 2][1], n_centerline),
+        )
+        for i, loc in enumerate(locs)
     ]
 
 
@@ -62,12 +95,12 @@ class PlacedLink(NamedTuple):
 
 def straight_chain(p: ChainParams, count: int) -> list[PlacedLink]:
     """Chain along +X: link i at x=i*pitch, tilted about X, alternating sign."""
-    base_solid, base_wire = build_link(p.link)
+    bases = _link_bases(p.link)
     locs = [
         Pos(i * p.pitch, 0, 0) * Rot(X=(p.tilt_deg if i % 2 == 0 else -p.tilt_deg))
         for i in range(count)
     ]
-    return _place_links(base_solid, base_wire, locs, p.link.n_centerline)
+    return _place_links(bases, locs, p.link.n_centerline)
 
 
 @dataclass(frozen=True)
@@ -98,7 +131,7 @@ def closed_loop(
             f"target_circumference={target_circumference} pitch={p.pitch}"
         )
     radius = n * p.pitch / (2 * math.pi)
-    base_solid, base_wire = build_link(p.link)
+    bases = _link_bases(p.link)
     # at angle 0 the link sits at (0,-radius) with its long axis (X)
     # along the circle tangent; Rot(Z) walks it around the loop
     locs = [
@@ -107,5 +140,5 @@ def closed_loop(
         * Rot(X=(p.tilt_deg if i % 2 == 0 else -p.tilt_deg))
         for i in range(n)
     ]
-    placed = _place_links(base_solid, base_wire, locs, p.link.n_centerline)
+    placed = _place_links(bases, locs, p.link.n_centerline)
     return placed, LoopInfo(count=n, radius=radius, circumference=n * p.pitch)

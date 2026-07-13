@@ -3,9 +3,26 @@ import math
 import numpy as np
 import pytest
 
-from claudecad.jewelry.chains import ChainParams, LoopInfo, PlacedLink, build_link, closed_loop, straight_chain
+from claudecad.core.centerline import discretize
+from claudecad.jewelry.chains import (
+    ChainParams,
+    LoopInfo,
+    PlacedLink,
+    _link_bases,
+    build_link,
+    closed_loop,
+    straight_chain,
+)
 from claudecad.jewelry.links import CubanLinkParams, LinkParams, curb_link
 from claudecad.verify import check_chain
+
+# the 2026-07-13 probe-verified cuban bracelet config (see
+# designs/cuban_bracelet/params.py) — the only cuban combo proven clean
+VERIFIED_CUBAN = ChainParams(
+    link=CubanLinkParams(length=20.0, width=15.0, wire_d=4.0, twist_deg=45.0),
+    tilt_deg=30.0,
+    pitch=10.0,
+)
 
 
 def test_straight_chain_count_and_type():
@@ -93,8 +110,26 @@ def test_build_link_dispatches_by_params_type():
 
 
 def test_straight_chain_accepts_cuban_params():
-    p = ChainParams(link=CubanLinkParams(), tilt_deg=20.0, pitch=10.0)
-    links = straight_chain(p, count=2)
-    assert len(links) == 2
+    """3 links so BOTH adjacent junction types are exercised: chiral links
+    make the (+t,-t) and (-t,+t) junctions non-congruent, and only the
+    handedness alternation in _link_bases lets both clear and thread."""
+    links = straight_chain(VERIFIED_CUBAN, count=3)
+    assert len(links) == 3
     report = check_chain(links)
     assert report.ok, report.summary()
+
+
+def test_link_bases_mirror_odd_cuban():
+    """Cuban (chiral) links: the odd base is the even base mirrored through
+    its local XY plane — same volume, centerline z negated."""
+    even, odd = _link_bases(CubanLinkParams())
+    assert odd[0].volume == pytest.approx(even[0].volume, rel=1e-6)
+    pe = discretize(even[1], 64)
+    po = discretize(odd[1], 64)
+    assert np.allclose(po, pe * np.array([1.0, 1.0, -1.0]), atol=1e-6)
+
+
+def test_link_bases_shared_for_curb():
+    """Achiral (planar) links need no mirroring: both bases are the same."""
+    even, odd = _link_bases(LinkParams())
+    assert even is odd

@@ -7,7 +7,14 @@ from claudecad.verify import check_chain
 
 
 def _chain():
-    p = ChainParams(link=CubanLinkParams(), tilt_deg=20.0, pitch=10.0)
+    # the 2026-07-13 probe-verified cuban config (designs/cuban_bracelet/params.py):
+    # with chirality-alternating placement the old default (twist 60, tilt 20)
+    # junction interpenetrates, so fixtures pin the verified-clean combo
+    p = ChainParams(
+        link=CubanLinkParams(length=20.0, width=15.0, wire_d=4.0, twist_deg=45.0),
+        tilt_deg=30.0,
+        pitch=10.0,
+    )
     return straight_chain(p, count=2)
 
 
