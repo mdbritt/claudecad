@@ -21,6 +21,15 @@ verifies, writes GLB/STEP to `out/`). The library is `claudecad/`
 5. Iterate 1–4 until the renders read true. Then hand `out/step/<name>.step`
    to the user for Plasticity import (File → Import; parts arrive named).
 
+Dense-chain designs verify with `check_chain(..., interlock_depth=N)` — see
+the 2026-07-13 spec. `designs/cuban_bracelet/probe.py` is the cheap pairwise
+frontier probe for parameter tuning; the construction law for twisted closed
+tubes (overlapping half-loop ruled lofts ONLY) lives in that spec's "Why
+ruled loft" section. Twisted (chiral) links must alternate handedness along
+a chain — with identical chiral links every second junction is a different,
+non-congruent geometry and interpenetrates; `chains._link_bases` implements
+the law and its docstring carries the evidence.
+
 ## Non-negotiable rules
 
 - All dimensions in millimeters, defined only in `params.py`. Derived values
