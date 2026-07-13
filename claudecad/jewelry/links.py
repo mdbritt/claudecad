@@ -84,21 +84,37 @@ class CubanLinkParams:
 
 
 def cuban_link(p: CubanLinkParams) -> tuple[Solid, Wire]:
-    """Twisted link solid (ruled loft — see the construction law in the
-    2026-07-13 spec) plus a measurement-only centerline Wire.
+    """Twisted link solid (two overlapping half-loop ruled lofts, fused —
+    see the construction law in the 2026-07-13 spec) plus a measurement-only
+    centerline Wire.
+
+    A single closed loft (first section == last section) buries two
+    coincident planar cap discs inside the tube at the seam; the uncut solid
+    passes is_valid/is_manifold, but any downstream boolean re-processes the
+    membrane into non-manifold topology. Building the tube as two open
+    half-loop lofts avoids the buried seam discs entirely (open lofts have
+    no closing caps), and overlapping the halves puts their union in generic
+    position — each half's end caps lie strictly inside the other half's
+    tube, so the boolean consumes them.
 
     The Wire is a periodic spline through exact map samples; it exists so
     placement transforms and discretization work identically to curb_link.
     It must NEVER be used as a sweep path (that construction is broken in
     OCCT for twisted closed curves; the loft is the only verified builder).
     """
-    sections = []
-    for i in range(p.n_sections + 1):                # first == last plane
+    half = p.n_sections // 2
+    ov = 1  # sections of overlap at each junction: generic-position union,
+            # no coincident-face fuse, cap discs consumed inside the other half
+
+    def section(idx: int):
         pt, t, xd = twisted_stadium_frame(
-            p.length, p.width, p.wire_d, p.twist_deg, i / p.n_sections
+            p.length, p.width, p.wire_d, p.twist_deg, idx / p.n_sections
         )
-        sections.append(Plane(origin=pt, z_dir=t, x_dir=xd) * Circle(p.wire_d / 2))
-    solid = loft(sections, ruled=True)
+        return Plane(origin=pt, z_dir=t, x_dir=xd) * Circle(p.wire_d / 2)
+
+    first = [section(i) for i in range(-ov, half + ov + 1)]
+    second = [section(i) for i in range(half - ov, p.n_sections + ov + 1)]
+    solid = loft(first, ruled=True) + loft(second, ruled=True)
 
     pts = twisted_centerline_points(
         p.length, p.width, p.wire_d, p.twist_deg, p.n_centerline
