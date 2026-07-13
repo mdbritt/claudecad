@@ -51,3 +51,23 @@ def test_closed_loop_verifies_including_wraparound():
     links, _ = closed_loop(ChainParams(), target_circumference=200.0)
     report = check_chain(links, closed=True)
     assert report.ok, report.summary()
+
+
+def test_closed_loop_count_rounds_to_nearest_even():
+    p = ChainParams()  # pitch 10.0
+    # x = 4.8: nearest even is 4 (|4.8-4| = 0.8 < |4.8-6| = 1.2)
+    _, info = closed_loop(p, target_circumference=48.0)
+    assert info.count == 4
+    # x = 5.2: nearest even is 6
+    _, info = closed_loop(p, target_circumference=52.0)
+    assert info.count == 6
+    # x = 5.0: exact odd tie rounds up
+    _, info = closed_loop(p, target_circumference=50.0)
+    assert info.count == 6
+
+
+def test_closed_loop_too_few_links_raises():
+    with pytest.raises(ValueError) as exc:
+        closed_loop(ChainParams(), target_circumference=20.0)  # x = 2 -> n = 2
+    msg = str(exc.value)
+    assert "20.0" in msg and "10.0" in msg  # values present in message

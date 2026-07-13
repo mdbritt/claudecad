@@ -68,13 +68,13 @@ def closed_loop(
     """Closed bracelet: links around a circle in XY, faces up +/-Z.
 
     Link count = target_circumference/pitch rounded to the nearest even
-    integer (odd counts cannot close an alternating +/-tilt pattern); the
-    actual radius is then count*pitch / 2*pi, so the realized circumference
-    tracks the pitch exactly and the target approximately.
+    integer (odd counts cannot close an alternating +/-tilt pattern); exact
+    odd ties round up. The actual radius is then count*pitch / 2*pi, so the
+    realized circumference tracks the pitch exactly and the target approximately.
     """
-    n = round(target_circumference / p.pitch)
-    if n % 2:
-        n += 1
+    # nearest even integer to target/pitch (odd counts cannot close an
+    # alternating +/-tilt pattern); exact-odd ties round up
+    n = 2 * math.floor(target_circumference / (2 * p.pitch) + 0.5)
     if n < 4:
         raise ValueError(
             f"loop needs >=4 links, got {n} from "
