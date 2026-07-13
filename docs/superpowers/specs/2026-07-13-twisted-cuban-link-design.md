@@ -17,14 +17,30 @@ signature V-groove. This upgrade adds both features.
 
 ## Approach (decided)
 
-**Twisted centerline, swept round profile.** The twist is modeled as the
-metal deforms: each point of the planar stadium centerline at position x
-along the link rotates about the link's long axis by phi(x) =
-twist_deg * (x / length), with x in [-length/2, +length/2] — a linear ramp
-through zero at the link center, reaching +-twist_deg/2 at the two ends, so
-the link stays symmetric.
-The twisted curve is sampled, fit with a closed periodic BSpline, and the
-circular wire profile is swept along it.
+**Twisted centerline, RULED LOFT through circular sections** (amended
+2026-07-13 after the spike gate; originally a periodic-spline sweep). The
+twist is modeled as the metal deforms: each point of the planar stadium
+centerline at position x along the link rotates about the link's long axis
+by phi(x) = twist_deg * (x / length), with x in [-length/2, +length/2] — a
+linear ramp through zero at the link center, reaching +-twist_deg/2 at the
+two ends, so the link stays symmetric.
+
+The solid is built by lofting circular sections (ruled=True) placed at
+n_sections (default 144) analytically computed frames along the twisted
+centerline (exact point, tangent, and a smooth periodic x_dir from the
+twisted vertical), keeping the Solid that loft() returns directly.
+
+**Why ruled loft (spike-established, all alternatives gauntleted):** every
+closed-twisted-path sweep in OCCT 7.x fails structurally — the corrected
+frame cannot close the seam (BRepCheck_UnorientableShape; ShapeFix provably
+cannot repair it), the Frenet frame oscillates near the low-curvature sides
+producing a locally self-intersecting surface whose plane cuts return
+garbage (BRepCheck_InvalidImbricationOfWires), and smooth (ruled=False)
+lofts overshoot between sections with the same boolean pathology. The ruled
+loft passed the full gauntlet at twist 20-60: valid/manifold/single-solid,
+volume within 0.05% of the tube-theorem value, and every slab cut and
+link-link boolean correct. The faceting (144 sections) renders as faint
+brushed texture, invisible at bracelet scale; n_sections is a quality dial.
 
 - Interlock verification is unchanged: the Gauss linking number consumes the
   discretized twisted centerline directly.
@@ -45,8 +61,9 @@ sweep proves pathological in OCCT); direct solid twist deformation
 ### `claudecad/jewelry/links.py` (extend)
 - `CubanLinkParams`: frozen dataclass — `length`, `width`, `wire_d`,
   `n_centerline` (same semantics/validation as `LinkParams`) plus
-  `twist_deg: float` (validated to a spike-established safe range) and
-  `n_spline: int` (centerline sampling density for the BSpline fit).
+  `twist_deg: float` (validated to the spike-established range [20, 60] —
+  outside it the loft construction is unverified) and `n_sections: int`
+  (loft section count, default 144, validated >= 32).
 - `cuban_link(p: CubanLinkParams) -> tuple[Solid, Wire]` — same contract as
   `curb_link`: solid + untessellated centerline wire, both centered at the
   origin, long axis X.
@@ -72,6 +89,13 @@ sweep proves pathological in OCCT); direct solid twist deformation
   guarantee preserved: an unsevered tube around a linked centerline stays
   linked, so linking number + zero intersection + single-piece together still
   prove the chain holds.
+- `check_chain` gains `interlock_depth: int = 1` (discovered during the
+  spike probe): dense cuban chains legitimately thread each link through its
+  TWO nearest neighbors per side. Pairs within `interlock_depth` index
+  distance (cyclic when closed) must be linked (|Lk| >= 1); pairs beyond it
+  must be unlinked; ALL pairs must have zero intersection. depth=1
+  reproduces today's behavior exactly (existing tests unchanged); the dense
+  bracelet uses depth=2.
 
 ### `designs/cuban_bracelet/` (upgrade in place)
 - `params.py`: switch to `CubanLinkParams` (adds `TWIST_DEG` via the link
