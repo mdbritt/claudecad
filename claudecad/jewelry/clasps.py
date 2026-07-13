@@ -38,7 +38,7 @@ class BoxClaspParams:
     button_h: float = 0.8
     lug_l: float = 5.0
     bar_d: float = 2.5
-    latch_arm: float = 8.0
+    latch_arm: float = 8.0  # drives the strap reach in clasp_latch via _ARM_REACH_MARGIN
     latch_t: float = 1.0
     latch_w: float = 3.0
     pin_d: float = 1.4
@@ -97,14 +97,13 @@ def clasp_box(p: BoxClaspParams) -> Solid:
     )
     body = body - slot
     # rear lug: two ears + bar for the end link
-    ear_gap = 6.0
-    ear_w = (p.box_w - ear_gap) / 2 - 1.0
+    ear_w = (p.box_w - _EAR_GAP) / 2 - 1.0
     for sy in (+1, -1):
         ear = Pos(p.box_l + p.lug_l / 2,
-                  sy * (ear_gap / 2 + ear_w / 2), 0) * Box(p.lug_l, ear_w, p.box_h)
+                  sy * (_EAR_GAP / 2 + ear_w / 2), 0) * Box(p.lug_l, ear_w, p.box_h)
         body = body + ear
     bar = Pos(p.box_l + p.lug_l - p.bar_d / 2 - 0.5, 0, 0) * Rot(X=90) * Cylinder(
-        p.bar_d / 2, ear_gap + 2 * ear_w
+        p.bar_d / 2, _EAR_GAP + 2 * ear_w
     )
     body = body + bar
     # pivot ear bosses: solid pads that thicken each side wall LOCALLY at
@@ -175,10 +174,9 @@ def clasp_tongue(p: BoxClaspParams, state: str) -> Solid:
     )
     tongue = tongue + button
     # tongue lug + bar (mirror of the box lug, on -X side)
-    ear_gap = 6.0
-    ear_w = (p.box_w - ear_gap) / 2 - 1.0
+    ear_w = (p.box_w - _EAR_GAP) / 2 - 1.0
     for sy in (+1, -1):
-        ear = Pos(-p.lug_l / 2, sy * (ear_gap / 2 + ear_w / 2), 0) * Box(
+        ear = Pos(-p.lug_l / 2, sy * (_EAR_GAP / 2 + ear_w / 2), 0) * Box(
             p.lug_l, ear_w, p.box_h
         )
         tongue = tongue + ear
@@ -188,7 +186,7 @@ def clasp_tongue(p: BoxClaspParams, state: str) -> Solid:
     )
     tongue = tongue + web
     bar = Pos(-p.lug_l + p.bar_d / 2 + 0.5, 0, 0) * Rot(X=90) * Cylinder(
-        p.bar_d / 2, ear_gap + 2 * ear_w
+        p.bar_d / 2, _EAR_GAP + 2 * ear_w
     )
     return tongue + bar
 
@@ -208,6 +206,10 @@ def clasp_tongue(p: BoxClaspParams, state: str) -> Solid:
 # part's own face for a clean through-cut, into open air (latch side, no
 # limit) or slightly into the cavity (box side, still clear of the
 # blade/leaf). _PIN_END_MARGIN / _PIN_INSET size the pin within its bores.
+# _EAR_GAP is the Y-width gap between the lug ears in clasp_box, clasp_tongue,
+# and clasp_latch (used by the latch's catch flange for guard engagement).
+# _ARM_REACH_MARGIN is the extra span beyond latch_arm that the latch arm
+# extends toward the tongue to reach the catch zone (reach = latch_arm + margin).
 _BOSS_D = 0.8
 _BOSS_COLLAR = 0.5
 _LATCH_GAP = 0.1
@@ -215,6 +217,8 @@ _BOSS_BORE_OVERSHOOT = 0.3
 _LATCH_BORE_OVERSHOOT = 0.6
 _PIN_END_MARGIN = 0.3
 _PIN_INSET = 0.1
+_EAR_GAP = 6.0
+_ARM_REACH_MARGIN = 1.3
 
 
 def _pin_axis(p: BoxClaspParams, side: int):
@@ -250,18 +254,17 @@ def clasp_latch(p: BoxClaspParams, side: int) -> Solid:
     ax, ay, az = _pin_axis(p, side)
 
     # arm: crosses the seam, connects the pivot (near ax) to the catch zone
-    arm_x_lo = -p.lug_l - 1.8
+    arm_x_lo = ax - (p.latch_arm + _ARM_REACH_MARGIN)
     arm_x_hi = ax
     arm = Pos((arm_x_lo + arm_x_hi) / 2, ay, az) * Box(
         arm_x_hi - arm_x_lo, p.latch_t, p.latch_w
     )
 
-    # catch: spans Y from inside the tongue lug ear's span (ear_gap/2 to
-    # ear_gap/2 + ear_w, see clasp_box/clasp_tongue) out to genuinely
+    # catch: spans Y from inside the tongue lug ear's span (_EAR_GAP/2 to
+    # _EAR_GAP/2 + ear_w, see clasp_box/clasp_tongue) out to genuinely
     # overlap the arm's inner face (real volume overlap, not edge-touching,
     # so the union fuses into a single manifold piece).
-    ear_gap = 6.0  # matches clasp_box / clasp_tongue lug ear layout
-    catch_y_inner = side * (ear_gap / 2 + 1.0)
+    catch_y_inner = side * (_EAR_GAP / 2 + 1.0)
     catch_y_outer = side * (abs(ay) - p.latch_t / 2 + 0.3)
     catch_x_lo = -p.lug_l - 1.5
     catch_x_hi = -p.lug_l - 0.5
