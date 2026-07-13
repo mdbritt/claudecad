@@ -8,7 +8,8 @@ import pytest
 
 DESIGNS = ["designs.cuban_bracelet.build", "designs.cuban_bracelet.params",
            "designs.cuban_bracelet.probe", "designs.simple_curb.build",
-           "designs.simple_curb.params"]
+           "designs.simple_curb.params", "designs._template.build",
+           "designs._template.params"]
 
 
 @pytest.mark.parametrize("module", DESIGNS)
