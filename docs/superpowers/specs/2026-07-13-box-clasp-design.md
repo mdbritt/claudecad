@@ -57,12 +57,23 @@ Rejected: shell ops; importing a non-parametric downloaded model.
   clasp_latch_l, clasp_latch_r, clasp_pin_l, clasp_pin_r — tongue in the
   RELAXED state, latches CLOSED: the export/worn state), plus
   `tongue_state(state: Literal["relaxed","compressed"]) -> Solid`,
-  `insertion_axis: Vector`, `stations(n) -> list[Location]` (sampled
-  insertion/extraction positions), and `attachment_loops: tuple[np.ndarray,
-  np.ndarray]` (closed centerline loops through each lug's bar circuit, for
-  linking checks).
+  `insertion_axis: tuple` (amended: shipped as a plain tuple; the planned
+  `stations(n)` helper was dropped — `verify.path_clearance` covers station
+  sampling), and `attachment_loops: tuple[np.ndarray, np.ndarray]` (closed
+  centerline loops through each lug's bar circuit, for linking checks —
+  amended: each loop makes a genuine Z-crossing under the bar; a flat
+  coplanar loop is mathematically unlinkable, Lk == 0).
 - Pins are concentric with latch bores and box ears BY CONSTRUCTION
   (shared axis parameters), with radial `clearance` in the bores.
+
+**Mechanism deviations accepted during implementation (2026-07-13, evidence
+in the v3 task reports):** pins seat in INWARD ear bosses (outward growth
+would change the chain-locked outer width; the plan's floating pin had no
+mount); the latch is a Y-wide catch flange, not a side hook (the planned
+hook sat entirely outside the tongue's Y-extent — guard unpassable by
+construction); defaults wall=0.8 / spring_lift=0.8 (the original defaults
+violated the leaf-fit validation inequality, which was kept unchanged);
+`latch_arm` drives strap reach via a named margin constant.
 
 ### `claudecad/verify.py` (extend)
 - `path_clearance(moving: Solid, fixed: Solid, axis, distance, n) ->
@@ -76,7 +87,10 @@ Rejected: shell ops; importing a non-parametric downloaded model.
   links whose arc positions fall inside the clasp gap; same chirality
   alternation, same derived-count law; the two arc-end tangent Locations
   are exposed on LoopInfo (new fields `gap_start: Location`,
-  `gap_end: Location`) so the clasp lugs align to the chain ends.
+  `gap_end: Location`). Amended: the shipped benchmark aligns the clasp by
+  chord math (`Pos(box_l/2, -sqrt(R^2-(box_l/2)^2), 0) * Rot(Z=180)`, the
+  Z-flip chirality-required since both end links share handedness); the gap
+  frames are retained as probe/inspection outputs.
 
 ### `designs/cuban_bracelet/` (extend)
 - `params.py`: CLASP section (BoxClaspParams instance + gap sizing).

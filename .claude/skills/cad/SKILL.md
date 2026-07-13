@@ -59,3 +59,17 @@ once per clone). Serve the repo root on port 8123 (`python3 -m http.server
 8123 --directory .` — the port is baked into the vendored engine patch) and
 open `http://localhost:8123/tools/step_viewer/?model=/out/step/<name>.step`.
 Drag-and-drop of .step/.glb files also works.
+
+## Mechanism verification (clasps and future moving parts)
+
+Mechanisms are proven statically with CONSTRUCTED STATES, never simulation:
+build each functional state as its own solid (e.g. the clasp tongue's
+relaxed vs compressed leaf) and gate on differentials — insertion =
+`verify.path_clearance` all-zero along the travel axis; lock = relaxed
+state interferes at the extraction station while compressed clears; guards
+= the blocked motion's station intersects the guard part. Functional gates
+run in the part's LOCAL frame (rigid-invariant) and ALWAYS on the shipped
+(post-relief/post-cut) geometry. Open chains use `chains.open_arc` (parity
+follows original position indices); attachment is proven by linking number
+against the lug's closed loop — the loop must genuinely cross the link's
+plane (a coplanar loop can never link). See the 2026-07-13 box-clasp spec.
