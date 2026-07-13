@@ -18,9 +18,9 @@ class LinkParams:
     n_centerline: int = 256
 
     def __post_init__(self):
-        if not (self.wire_d < self.width < self.length):
+        if not (0 < self.wire_d < self.width < self.length):
             raise ValueError(
-                f"need wire_d < width < length, got "
+                f"need 0 < wire_d < width < length, got "
                 f"wire_d={self.wire_d} width={self.width} length={self.length}"
             )
 
