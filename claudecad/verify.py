@@ -39,6 +39,12 @@ def intersection_volume(a, b) -> float:
     return 0.0 if inter is None else inter.volume
 
 
+def clearance(a, b) -> float:
+    """Exact minimum distance between two shapes (0.0 if touching or
+    penetrating — combine with intersection_volume to distinguish)."""
+    return float(a.distance_to(b))
+
+
 LINKING_TOL = 0.1  # max deviation of discretized Gauss integral from an integer
 
 
@@ -68,6 +74,8 @@ class PairCheck:
     intersection: float
     linking: float
     adjacent_distance: int = 0
+    gap: float | None = None
+    gap_ok: bool = True
 
     @property
     def is_linked(self) -> bool:
@@ -79,6 +87,8 @@ class PairCheck:
     @property
     def ok(self) -> bool:
         if self.intersection > 0.0:
+            return False
+        if not self.gap_ok:
             return False
         return self.is_linked if self.adjacent else not self.is_linked
 
@@ -114,6 +124,10 @@ class ChainReport:
                 msgs.append(
                     f"links {p.i},{p.j}: unexpectedly linked (Lk={p.linking:.3f})"
                 )
+            if not p.gap_ok:
+                msgs.append(
+                    f"links {p.i},{p.j}: gap {p.gap:.3f} mm exceeds max_gap"
+                )
         return msgs
 
     def summary(self) -> str:
@@ -135,7 +149,7 @@ def _bboxes_disjoint(a, b) -> bool:
     )
 
 
-def check_chain(items: Sequence[tuple], closed: bool = False, interlock_depth: int = 1) -> ChainReport:
+def check_chain(items: Sequence[tuple], closed: bool = False, interlock_depth: int = 1, max_gap: float | None = None) -> ChainReport:
     """Verify a chain of (solid, centerline_points) pairs.
 
     Pairs within `interlock_depth` cyclic index distance must interlock
@@ -144,9 +158,15 @@ def check_chain(items: Sequence[tuple], closed: bool = False, interlock_depth: i
     are depth 1 (the default, which preserves the original behavior).
     Disjoint bounding boxes prove zero intersection (a separating
     axis-aligned plane exists), so the boolean is skipped there.
+
+    If max_gap is set, adjacent pairs (within interlock_depth) must satisfy
+    clearance <= max_gap (near-contact band: 0.0 for touching up to max_gap).
+    max_gap must be non-negative; raises ValueError if max_gap <= 0.
     """
     if interlock_depth < 1:
         raise ValueError(f"need interlock_depth >= 1, got {interlock_depth}")
+    if max_gap is not None and max_gap <= 0:
+        raise ValueError(f"max_gap must be positive, got {max_gap}")
     items = list(items)
     n = len(items)
     solids = [check_solid(s) for s, _ in items]
@@ -159,8 +179,13 @@ def check_chain(items: Sequence[tuple], closed: bool = False, interlock_depth: i
             si, ci = items[i]
             sj, cj = items[j]
             inter = 0.0 if _bboxes_disjoint(si, sj) else intersection_volume(si, sj)
+            g = None
+            g_ok = True
+            if max_gap is not None and dist <= interlock_depth:
+                g = clearance(si, sj)
+                g_ok = g <= max_gap
             pairs.append(
-                PairCheck(i, j, dist <= interlock_depth, inter, linking_number(ci, cj), dist)
+                PairCheck(i, j, dist <= interlock_depth, inter, linking_number(ci, cj), dist, g, g_ok)
             )
     return ChainReport(solids, pairs)
 
