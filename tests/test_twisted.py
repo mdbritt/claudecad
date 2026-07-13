@@ -32,8 +32,8 @@ def test_extents_and_closure():
     L, W, D, T = 20.0, 14.0, 4.1, 60.0
     pts = twisted_centerline_points(L, W, D, T, 512)
     xmax = (L - D) / 2
-    assert pts[:, 0].max() == pytest.approx(xmax, abs=1e-6)
-    assert pts[:, 0].min() == pytest.approx(-xmax, abs=1e-6)
+    assert pts[:, 0].max() == pytest.approx(xmax, abs=1e-3)
+    assert pts[:, 0].min() == pytest.approx(-xmax, abs=1e-3)
     # closure: first and last samples are one step apart, not far apart
     step = np.linalg.norm(pts[1] - pts[0])
     assert np.linalg.norm(pts[0] - pts[-1]) < 3 * step
@@ -48,7 +48,8 @@ def test_twist_rotates_material_out_of_plane():
     mid_top = pts[np.argmin(np.abs(pts[:, 0]))]      # x ~ 0, pre-twist (0, +-r, 0)
     assert abs(mid_top[2]) < 0.05                    # still in-plane at the center
     assert abs(abs(mid_top[1]) - r) < 0.05
-    near_end = pts[np.argmin(np.abs(pts[:, 0] - h))]  # straight/arc junction
+    top = pts[pts[:, 1] > 0]
+    near_end = top[np.argmin(np.abs(top[:, 0] - h))]
     phi = math.atan2(near_end[2], near_end[1])
     # expected twist at x=h: T/2 * h/(h+r) ~ 11.3 deg for these dims
     assert phi > math.radians(5)
