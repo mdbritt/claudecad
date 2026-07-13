@@ -3,7 +3,8 @@ import math
 import numpy as np
 import pytest
 
-from claudecad.jewelry.chains import ChainParams, LoopInfo, PlacedLink, closed_loop, straight_chain
+from claudecad.jewelry.chains import ChainParams, LoopInfo, PlacedLink, build_link, closed_loop, straight_chain
+from claudecad.jewelry.links import CubanLinkParams, LinkParams, curb_link
 from claudecad.verify import check_chain
 
 
@@ -78,3 +79,22 @@ def test_chain_params_validation():
         ChainParams(pitch=0.0)
     with pytest.raises(ValueError):
         ChainParams(pitch=-10.0)
+
+
+def test_build_link_dispatches_by_params_type():
+    s1, w1 = build_link(LinkParams())
+    ref, _ = curb_link(LinkParams())
+    assert s1.volume == pytest.approx(ref.volume, rel=1e-9)
+    s2, w2 = build_link(CubanLinkParams())
+    assert s2.is_valid
+    # a twisted link is non-planar: its z-extent exceeds the wire diameter
+    bb = s2.bounding_box()
+    assert bb.max.Z - bb.min.Z > CubanLinkParams().wire_d + 1.0
+
+
+def test_straight_chain_accepts_cuban_params():
+    p = ChainParams(link=CubanLinkParams(), tilt_deg=20.0, pitch=10.0)
+    links = straight_chain(p, count=2)
+    assert len(links) == 2
+    report = check_chain(links)
+    assert report.ok, report.summary()
