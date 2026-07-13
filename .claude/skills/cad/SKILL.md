@@ -69,6 +69,8 @@ layer that touches disk/Blender.
 
 - Chains: chirality — twisted links are handed; chains alternate link
   handedness (`chains._link_bases`) or the two junction types diverge.
+  Open (non-closed) chains use `chains.open_arc`, whose parity follows the
+  original position index.
   Dense chains may thread depth 2 (`interlock_depth`). Real cuban pitch ≈
   0.49 × link length; the look comes from flat lie + diamond-cut facets.
 - `finishing.diamond_cut` grinds an assembled chain flat (slab intersection,
