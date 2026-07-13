@@ -11,6 +11,7 @@ from dataclasses import replace
 import numpy as np
 from build123d import Pos, Rot
 
+from claudecad.assembly import expand
 from claudecad.jewelry.chains import open_arc
 from claudecad.jewelry.clasps import box_clasp, clasp_tongue
 from claudecad.verify import (
@@ -24,18 +25,6 @@ from .params import (
     CHAIN, CLASP, CUT_Z, GAP_ARC_LENGTH, INTERLOCK_DEPTH, RELIEF_CLEARANCE,
     TARGET_CIRCUMFERENCE,
 )
-
-_DIRS = ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1))
-
-
-def _expand(solid, delta):
-    """Minkowski-lite outward expansion: the solid unioned with six
-    axis-translated copies. Used to build relief-slot cutters with at least
-    ~delta/sqrt(3) clearance in every direction (delta on the axes)."""
-    out = solid
-    for dx, dy, dz in _DIRS:
-        out = out + Pos(dx * delta, dy * delta, dz * delta) * solid
-    return out
 
 
 def _placed_points(loc, pts):
@@ -81,9 +70,15 @@ def main() -> int:
     coarse_chain = replace(CHAIN, link=replace(CHAIN.link, n_sections=96))
     coarse_links, _ = open_arc(coarse_chain, TARGET_CIRCUMFERENCE, GAP_ARC_LENGTH)
     near4 = diamond_cut([coarse_links[i] for i in (0, 1, -2, -1)], CUT_Z)
-    cutter_w = _expand(near4[0].solid, RELIEF_CLEARANCE)
+    # (assembly.relieve bundles this expand-and-subtract into one call, but
+    # it recomputes the expansion from scratch every call; since the SAME
+    # cutter is reused across all 5 relief applications below -- and
+    # expanding these near-tangent coarse lofts is itself expensive -- the
+    # expand step is done once here with the library's expand() and reused,
+    # exactly like the pre-promotion code.)
+    cutter_w = expand(near4[0].solid, RELIEF_CLEARANCE)
     for pl in near4[1:]:
-        cutter_w = cutter_w + _expand(pl.solid, RELIEF_CLEARANCE)
+        cutter_w = cutter_w + expand(pl.solid, RELIEF_CLEARANCE)
     cutter = clasp_loc.inverse() * cutter_w
     # ... and the coarse surface sits up to ~0.01 mm inside the fine one in
     # places, which left a 0.0003 mm^3 clasp-vs-chain sliver on the first

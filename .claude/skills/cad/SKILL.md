@@ -8,8 +8,9 @@ description: Use when designing, modifying, rendering, or exporting any CAD piec
 Parametric designs live in `designs/<name>/` as `params.py` (every dimension,
 mm, single source of truth) + `build.py` (composes library parts, verifies,
 writes GLB/STEP to `out/`). Domain-neutral geometry lives in `claudecad/`
-(`core/`, `verify.py`); domain packs (e.g. `jewelry/`) hold reusable parts
-for a design family. `tools/` is the only layer that touches disk/Blender.
+(`core/`, `verify.py`, `assembly.py`); domain packs (e.g. `jewelry/`) hold
+reusable parts for a design family. `tools/` is the only layer that touches
+disk/Blender.
 
 ## The loop
 
@@ -73,8 +74,7 @@ for a design family. `tools/` is the only layer that touches disk/Blender.
   Dense chains may thread depth 2 (`interlock_depth`). Real cuban pitch ≈
   0.49 × link length; the look comes from flat lie + diamond-cut facets.
 - `finishing.diamond_cut` grinds an assembled chain flat (slab intersection,
-  severing caught by piece_count); relief slots via the benchmark's relieve
-  helper (assembly promotion planned).
+  severing caught by piece_count); relief slots via `assembly.relieve`.
 
 ## Blender renderer
 
