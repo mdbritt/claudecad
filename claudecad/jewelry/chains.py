@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import NamedTuple
 
 import numpy as np
-from build123d import Plane, Pos, Rot, Solid, Wire, mirror
+from build123d import Location, Plane, Pos, Rot, Solid, Wire, mirror
 
 from claudecad.core.centerline import discretize
 from claudecad.jewelry.links import CubanLinkParams, LinkParams, cuban_link, curb_link
@@ -51,13 +51,15 @@ def _link_bases(params) -> tuple[tuple[Solid, Wire], tuple[Solid, Wire]]:
     return base, base
 
 
-def _place_links(bases, locs, n_centerline) -> list[PlacedLink]:
+def _place_links(bases, locs, n_centerline, parities=None) -> list[PlacedLink]:
+    if parities is None:
+        parities = list(range(len(locs)))
     return [
         PlacedLink(
-            loc * bases[i % 2][0],
-            discretize(loc * bases[i % 2][1], n_centerline),
+            loc * bases[par % 2][0],
+            discretize(loc * bases[par % 2][1], n_centerline),
         )
-        for i, loc in enumerate(locs)
+        for par, loc in zip(parities, locs)
     ]
 
 
@@ -105,11 +107,13 @@ def straight_chain(p: ChainParams, count: int) -> list[PlacedLink]:
 
 @dataclass(frozen=True)
 class LoopInfo:
-    """Derived (read-only) values of a closed loop."""
+    """Derived (read-only) values of a closed loop or open arc."""
 
     count: int
     radius: float
     circumference: float
+    gap_start: Location | None = None
+    gap_end: Location | None = None
 
 
 def closed_loop(
@@ -142,3 +146,56 @@ def closed_loop(
     ]
     placed = _place_links(bases, locs, p.link.n_centerline)
     return placed, LoopInfo(count=n, radius=radius, circumference=n * p.pitch)
+
+
+def open_arc(
+    p: ChainParams, target_circumference: float, gap_arc_length: float
+) -> tuple[list[PlacedLink], LoopInfo]:
+    """Closed-loop placement minus the links inside a gap centered at
+    angle 0 (the (0,-radius) point). Chirality parity follows the ORIGINAL
+    position index so the arc is a strict subset of the closed loop.
+    gap_start/gap_end are tangent frames at the gap edges: gap_end is the
+    edge the chain ENTERS the gap (last omitted boundary clockwise),
+    gap_start where it LEAVES; both with local +X along the chain tangent
+    and local Z up — the frames a clasp bridges between.
+    """
+    if gap_arc_length <= 0:
+        raise ValueError(f"need gap_arc_length > 0, got {gap_arc_length}")
+    n = 2 * math.floor(target_circumference / (2 * p.pitch) + 0.5)
+    if n < 4:
+        raise ValueError(
+            f"loop needs >=4 links, got {n} from "
+            f"target_circumference={target_circumference} pitch={p.pitch}"
+        )
+    radius = n * p.pitch / (2 * math.pi)
+    gap_half_deg = math.degrees((gap_arc_length / 2) / radius)
+    if gap_half_deg >= 90:
+        raise ValueError(
+            f"gap_arc_length={gap_arc_length} spans {2 * gap_half_deg:.1f} deg "
+            f"of a {radius:.1f}mm-radius loop — too large"
+        )
+    bases = _link_bases(p.link)
+    locs, parities = [], []
+    for i in range(n):
+        phi = 360 * i / n
+        # signed angular distance from the gap center at 0 deg
+        dist = min(phi, 360 - phi)
+        if dist <= gap_half_deg:
+            continue
+        locs.append(
+            Rot(Z=phi)
+            * Pos(0, -radius, 0)
+            * Rot(X=(p.tilt_deg if i % 2 == 0 else -p.tilt_deg))
+        )
+        parities.append(i)
+    if not locs:
+        raise ValueError(
+            f"gap_arc_length={gap_arc_length} leaves no links on the loop"
+        )
+    placed = _place_links(bases, locs, p.link.n_centerline, parities)
+    gap_start = Rot(Z=+gap_half_deg) * Pos(0, -radius, 0)
+    gap_end = Rot(Z=-gap_half_deg) * Pos(0, -radius, 0)
+    return placed, LoopInfo(
+        count=len(placed), radius=radius, circumference=n * p.pitch,
+        gap_start=gap_start, gap_end=gap_end,
+    )

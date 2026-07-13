@@ -2,6 +2,7 @@ import math
 
 import numpy as np
 import pytest
+from build123d import Location
 
 from claudecad.core.centerline import discretize
 from claudecad.jewelry.chains import (
@@ -11,6 +12,7 @@ from claudecad.jewelry.chains import (
     _link_bases,
     build_link,
     closed_loop,
+    open_arc,
     straight_chain,
 )
 from claudecad.jewelry.links import CubanLinkParams, LinkParams, curb_link
@@ -133,3 +135,44 @@ def test_link_bases_shared_for_curb():
     """Achiral (planar) links need no mirroring: both bases are the same."""
     even, odd = _link_bases(LinkParams())
     assert even is odd
+
+
+def test_open_arc_omits_gap_links_and_reports_edges():
+    p = ChainParams()   # planar curb defaults — cheap
+    closed, cinfo = closed_loop(p, target_circumference=200.0)
+    arc, info = open_arc(p, target_circumference=200.0, gap_arc_length=25.0)
+    assert info.circumference == cinfo.circumference
+    assert 0 < len(arc) < len(closed)
+    assert info.count == len(arc)
+    assert isinstance(info.gap_start, Location)
+    assert isinstance(info.gap_end, Location)
+
+
+def test_open_arc_preserves_original_parity():
+    """Chirality parity follows the original position index, not the
+    re-enumerated placed order: the first link after the gap must sit at
+    the same pose as in the closed loop."""
+    p = ChainParams()
+    closed, _ = closed_loop(p, target_circumference=200.0)
+    arc, _ = open_arc(p, target_circumference=200.0, gap_arc_length=25.0)
+    # every placed arc link must coincide with SOME closed-loop link
+    for pl in arc[:3] + arc[-3:]:
+        c = pl.centerline.mean(axis=0)
+        best = min(
+            float(np.linalg.norm(cl.centerline.mean(axis=0) - c)) for cl in closed
+        )
+        assert best < 1e-6
+
+
+def test_open_arc_verifies():
+    p = ChainParams()
+    arc, _ = open_arc(p, target_circumference=200.0, gap_arc_length=25.0)
+    report = check_chain(arc, closed=False)
+    assert report.ok, report.summary()
+
+
+def test_open_arc_validation():
+    with pytest.raises(ValueError):
+        open_arc(ChainParams(), 200.0, gap_arc_length=0.0)
+    with pytest.raises(ValueError):
+        open_arc(ChainParams(), 200.0, gap_arc_length=190.0)  # gap eats the chain
