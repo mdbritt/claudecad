@@ -135,3 +135,25 @@ def test_interlock_depth_2_requires_second_neighbor_linked():
 def test_interlock_depth_validation():
     with pytest.raises(ValueError):
         check_chain(_hopf_tori(), interlock_depth=0)
+
+
+from claudecad.verify import path_clearance
+
+
+def test_path_clearance_reports_collision_profile():
+    fixed = Box(10, 10, 10)                       # centered at origin
+    moving = Pos(20, 0, 0) * Box(10, 10, 10)      # 10mm gap along X
+    vols = path_clearance(moving, fixed, axis=(-1, 0, 0), distance=20, n=5)
+    assert len(vols) == 5
+    assert vols[0] == 0.0                          # untranslated: clear
+    assert vols[1] == 0.0                          # -5mm: faces touch, no volume
+    assert vols[2] == 0.0                          # -10mm: faces touch (no penetration yet)
+    assert vols[3] == pytest.approx(500.0, rel=1e-6)  # -15mm: half overlap
+    assert vols[4] == pytest.approx(1000.0, rel=1e-6)  # -20mm: coincident
+
+
+def test_path_clearance_validation():
+    with pytest.raises(ValueError):
+        path_clearance(Box(1, 1, 1), Box(1, 1, 1), axis=(1, 0, 0), distance=1, n=1)
+    with pytest.raises(ValueError):
+        path_clearance(Box(1, 1, 1), Box(1, 1, 1), axis=(0, 0, 0), distance=1, n=3)
