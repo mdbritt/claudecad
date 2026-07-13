@@ -86,8 +86,11 @@ claudeCAD/
 A cuban (curb) link chain: flattened oval links, each twisted so the chain lies
 flat, each link threading through its neighbor.
 
-**Parameters:** wrist circumference, link count, link width, wire gauge, twist
-angle, inter-link clearance.
+**Parameters:** wrist circumference, link width, wire gauge, twist angle, and
+inter-link clearance are the *driving* parameters; link count and pitch are
+*derived* from circumference and link geometry (they are coupled — specifying
+both independently could contradict). `params.py` exposes the derived values
+read-only.
 
 **v1 scope:** a closed continuous loop of properly interlocked curb links that
 reads as a real cuban link in renders. The box clasp (standard on real cuban
