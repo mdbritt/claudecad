@@ -92,3 +92,46 @@ def test_check_chain_closed_adds_wraparound_adjacency():
     assert len(open_failures) == 2   # (0,1), (1,2)
     assert len(closed_failures) == 3  # + wraparound (0,2)
     assert any("0,2" in f for f in closed_failures)
+
+
+def test_solid_report_piece_count():
+    from build123d import Compound
+    single = Torus(10, 1.5)
+    assert check_solid(single).piece_count == 1
+    assert check_solid(single).ok
+    split = Compound(children=[Box(5, 5, 5), Pos(50, 0, 0) * Box(5, 5, 5)])
+    r = check_solid(split)
+    assert r.piece_count == 2
+    assert not r.ok
+
+
+def _ring_chain(n, spacing):
+    """n unlinked tori in a row — a topology fixture for depth classification."""
+    return [
+        (Pos(spacing * i, 0, 0) * Torus(10, 1.5), 10 * _circle() + (spacing * i, 0, 0))
+        for i in range(n)
+    ]
+
+
+def test_interlock_depth_default_matches_old_behavior():
+    """depth=1 on the Hopf pair passes exactly as before."""
+    report = check_chain(_hopf_tori())
+    assert report.ok, report.failures()
+
+
+def test_interlock_depth_2_requires_second_neighbor_linked():
+    """With depth=2, an unlinked (0,2) pair becomes a failure; with depth=1
+    the same geometry passes the (0,2) check (must be unlinked) and fails
+    only the adjacent pairs (unlinked neighbors)."""
+    items = _ring_chain(3, 50)
+    d1 = check_chain(items, interlock_depth=1)
+    d2 = check_chain(items, interlock_depth=2)
+    d1_msgs = [f for f in d1.failures() if "not interlocked" in f]
+    d2_msgs = [f for f in d2.failures() if "not interlocked" in f]
+    assert len(d1_msgs) == 2          # (0,1), (1,2)
+    assert len(d2_msgs) == 3          # + (0,2) now required linked
+
+
+def test_interlock_depth_validation():
+    with pytest.raises(ValueError):
+        check_chain(_hopf_tori(), interlock_depth=0)

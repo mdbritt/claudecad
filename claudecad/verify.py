@@ -15,14 +15,22 @@ class SolidReport:
     is_valid: bool
     is_manifold: bool
     volume: float
+    piece_count: int = 1
 
     @property
     def ok(self) -> bool:
-        return self.is_valid and self.is_manifold and self.volume > 0.0
+        return (
+            self.is_valid
+            and self.is_manifold
+            and self.volume > 0.0
+            and self.piece_count == 1
+        )
 
 
 def check_solid(shape) -> SolidReport:
-    return SolidReport(shape.is_valid, shape.is_manifold, shape.volume)
+    return SolidReport(
+        shape.is_valid, shape.is_manifold, shape.volume, len(shape.solids())
+    )
 
 
 def intersection_volume(a, b) -> float:
@@ -58,6 +66,7 @@ class PairCheck:
     adjacent: bool
     intersection: float
     linking: float
+    adjacent_distance: int = 0
 
     @property
     def is_linked(self) -> bool:
@@ -88,7 +97,8 @@ class ChainReport:
             if not s.ok:
                 msgs.append(
                     f"link {i}: invalid solid (valid={s.is_valid} "
-                    f"manifold={s.is_manifold} volume={s.volume:.3f})"
+                    f"manifold={s.is_manifold} volume={s.volume:.3f} "
+                    f"pieces={s.piece_count})"
                 )
         for p in self.pairs:
             if p.intersection > 0.0:
@@ -124,27 +134,31 @@ def _bboxes_disjoint(a, b) -> bool:
     )
 
 
-def check_chain(items: Sequence[tuple], closed: bool = False) -> ChainReport:
+def check_chain(items: Sequence[tuple], closed: bool = False, interlock_depth: int = 1) -> ChainReport:
     """Verify a chain of (solid, centerline_points) pairs.
 
-    Adjacent = consecutive indices (+ wraparound when closed). Adjacent pairs
-    must interlock (|Lk|>=1) without touching; all other pairs must be
-    unlinked and disjoint. Disjoint bounding boxes prove zero intersection
-    (a separating axis-aligned plane exists), so the boolean is skipped.
+    Pairs within `interlock_depth` cyclic index distance must interlock
+    (|Lk| >= 1); pairs beyond must be unlinked; ALL pairs must have zero
+    intersection. Dense cuban chains thread depth 2; classic curb chains
+    are depth 1 (the default, which preserves the original behavior).
+    Disjoint bounding boxes prove zero intersection (a separating
+    axis-aligned plane exists), so the boolean is skipped there.
     """
+    if interlock_depth < 1:
+        raise ValueError(f"need interlock_depth >= 1, got {interlock_depth}")
     items = list(items)
     n = len(items)
     solids = [check_solid(s) for s, _ in items]
-    adjacent = {(i, i + 1) for i in range(n - 1)}
-    if closed and n > 2:
-        adjacent.add((0, n - 1))
     pairs = []
     for i in range(n):
         for j in range(i + 1, n):
+            dist = j - i
+            if closed and n > 2:
+                dist = min(dist, n - (j - i))
             si, ci = items[i]
             sj, cj = items[j]
             inter = 0.0 if _bboxes_disjoint(si, sj) else intersection_volume(si, sj)
             pairs.append(
-                PairCheck(i, j, (i, j) in adjacent, inter, linking_number(ci, cj))
+                PairCheck(i, j, dist <= interlock_depth, inter, linking_number(ci, cj), dist)
             )
     return ChainReport(solids, pairs)
