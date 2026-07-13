@@ -15,7 +15,7 @@
 - Project root `/Users/mike/code/claudeCAD`; all commands run from there (`uv run ...`).
 - All dimensions mm. Library modules stay pure (no I/O); `tools/` only touches disk.
 - Never weaken a verification check. Never export STEP that fails verification.
-- **Construction law (spike-established, do not re-litigate):** twisted closed tubes are built ONLY as `loft(sections, ruled=True)` through analytically computed frames, keeping the Solid `loft()` returns directly. Forbidden, all gauntlet-proven broken for twisted closed paths: `sweep()` in any frame mode (corrected = unorientable seam; Frenet = self-intersecting surface), `ruled=False` lofts (boolean-pathological), Shell/Solid reassembly of loft faces, fusing pipes at coincident faces, `Edge.trim()` on sweep spines.
+- **Construction law (spike-established; amended during Task 5 — see the spec):** twisted closed tubes are built ONLY as ruled lofts (`ruled=True`) through analytically computed frames, assembled as TWO overlapping half-loop lofts fused (a single closed loft buries coincident seam cap discs that break downstream booleans — Task 5 diagnosis). Forbidden, all gauntlet-proven broken for twisted closed paths: `sweep()` in any frame mode (corrected = unorientable seam; Frenet = self-intersecting surface), `ruled=False` lofts (boolean-pathological), single closed lofts with first==last section, Shell/Solid reassembly of loft faces, fusing pipes at coincident faces, `Edge.trim()` on sweep spines.
 - `is_valid` is necessary but NOT sufficient — boolean-robustness is proven only by cut/intersection behavior (that is what the tests assert).
 - Verified parameter facts (2026-07-13 spike, 176 arc-placed probe combos + construction gauntlet):
   - ruled loft passes the full gauntlet for twist ∈ [20, 60], n_sections=144, vol_err ≤ 0.05%.
@@ -942,7 +942,8 @@ Append to `.claude/skills/cad/SKILL.md` under the loop section:
 Dense-chain designs verify with `check_chain(..., interlock_depth=N)` — see
 the 2026-07-13 spec. `designs/cuban_bracelet/probe.py` is the cheap pairwise
 frontier probe for parameter tuning; the construction law for twisted closed
-tubes (ruled loft ONLY) lives in that spec's "Why ruled loft" section.
+tubes (overlapping half-loop ruled lofts ONLY) lives in that spec's "Why
+ruled loft" section.
 ```
 
 ```bash

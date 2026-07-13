@@ -25,10 +25,18 @@ by phi(x) = twist_deg * (x / length), with x in [-length/2, +length/2] — a
 linear ramp through zero at the link center, reaching +-twist_deg/2 at the
 two ends, so the link stays symmetric.
 
-The solid is built by lofting circular sections (ruled=True) placed at
+The solid is built from circular sections (ruled=True lofts) placed at
 n_sections (default 144) analytically computed frames along the twisted
 centerline (exact point, tangent, and a smooth periodic x_dir from the
-twisted vertical), keeping the Solid that loft() returns directly.
+twisted vertical) — as TWO overlapping half-loop lofts, fused (amended
+2026-07-13 during implementation): a single closed loft with first==last
+section buries two coincident planar cap discs inside the tube at the seam;
+the uncut solid passes is_valid/is_manifold, but any slab cut re-processes
+that membrane into non-manifold topology (diagnosed: 146 faces/2 coincident
+discs uncut, 70 bad edges post-cut). Open half-loop lofts have no buried
+discs, and one section of overlap at each junction puts the union in
+generic position where the boolean consumes the caps (144 faces, 0 planar,
+post-cut manifold — regression-tested in the cuban_link acid test).
 
 **Why ruled loft (spike-established, all alternatives gauntleted):** every
 closed-twisted-path sweep in OCCT 7.x fails structurally — the corrected
