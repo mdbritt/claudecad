@@ -24,6 +24,7 @@ Chosen 45/30/4.0/15 over 60/34/4.1/15 (also exactly zero) for the visibly
 flatter lie — beats v1's tilt 34.
 """
 from claudecad.jewelry.chains import ChainParams
+from claudecad.jewelry.clasps import BoxClaspParams
 from claudecad.jewelry.links import CubanLinkParams
 
 # bracelet centerline circumference: wrist + wearing ease
@@ -48,3 +49,28 @@ CUT_Z = 2.6
 
 # neighbors thread once each side at pitch 10 (probe: lk02 = 0)
 INTERLOCK_DEPTH = 1
+
+# --- box clasp -----------------------------------------------------------
+#
+# Sized to the chain interface: width = link width, height = 2*CUT_Z, so the
+# flat faces continue the diamond-cut band. box_l was retuned 14 -> 22 from
+# the attachment geometry (probed 2026-07-13 on the real arc): with 3 links
+# omitted the end links sit at +/-36 deg and their near eyes center at
+# x = +/-14.45 mm, so the lug bars must reach bar_half = box_l/2 + lug_l -
+# bar_d/2 - 0.5 = 14.25 mm; at the plan's box_l=14 the bars stop at 10.25 mm,
+# short of the eyes entirely (both |Lk| = 0, end caps at x = +/-11.2).
+# 22 x 15 keeps the reference proportion (box ~ 1.1x a 20 mm link).
+CLASP = BoxClaspParams(box_l=22.0, box_w=15.0, box_h=2 * CUT_Z, lug_l=5.0)
+
+# arc gap the clasp bridges. Any value in (20, 40) omits the same 3 links
+# (0, +/-18 deg) of the 20-position loop, leaving 17 -- the end-link eyes,
+# and therefore the placement above, do not move within that window.
+GAP_ARC_LENGTH = 27.0
+
+# clearance of the relief slots cut into the clasp where the end links
+# enter it (see build._expand): the assembled clasp overlaps the end-link
+# eye zones by construction (bars thread the eyes), and like the real
+# manufactured part the box/tongue/latch bodies get link-shaped slots.
+# 0.4 mm zeroes every clasp-vs-chain intersection while all six parts stay
+# single-piece and the guard keeps >11 mm^3 of engagement (probed).
+RELIEF_CLEARANCE = 0.4
