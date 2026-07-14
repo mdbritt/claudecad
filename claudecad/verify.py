@@ -8,7 +8,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 import numpy as np
-from build123d import Pos, Vector
+from build123d import Location, Pos, Vector
 
 
 @dataclass(frozen=True)
@@ -207,5 +207,34 @@ def path_clearance(moving, fixed, axis, distance: float, n: int) -> list[float]:
     for i in range(n):
         d = distance * i / (n - 1)
         placed = Pos(a.X * d, a.Y * d, a.Z * d) * moving
+        out.append(intersection_volume(placed, fixed))
+    return out
+
+
+def screw_clearance(moving, fixed, axis, center, lead: float, turns: float,
+                    n: int) -> list[float]:
+    """Intersection volume of `moving` under a screw motion at n stations.
+
+    Station i rotates `moving` by 360*turns*i/(n-1) degrees about `axis`
+    through `center`, then translates it by lead*turns*i/(n-1) along `axis`.
+    Station 0 is the untransformed pose. `lead=0` is a pure rotation about
+    the axis. Returns raw volumes (mm^3) — callers decide pass/fail, exactly
+    like `path_clearance`.
+    """
+    if n < 2:
+        raise ValueError(f"need n >= 2 stations, got {n}")
+    a = Vector(*axis) if not isinstance(axis, Vector) else axis
+    if a.length == 0:
+        raise ValueError(f"axis must be nonzero, got {tuple(a)}")
+    a = a.normalized()
+    c = tuple(Vector(*center))
+    ad = tuple(a)
+    out = []
+    for i in range(n):
+        frac = i / (n - 1)
+        angle = 360.0 * turns * frac
+        axial = lead * turns * frac
+        placed = Pos(a.X * axial, a.Y * axial, a.Z * axial) * \
+            Location(c, ad, angle) * moving
         out.append(intersection_volume(placed, fixed))
     return out
