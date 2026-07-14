@@ -8,9 +8,9 @@ description: Use when designing, modifying, rendering, or exporting any CAD piec
 Parametric designs live in `designs/<name>/` as `params.py` (every dimension,
 mm, single source of truth) + `build.py` (composes library parts, verifies,
 writes GLB/STEP to `out/`). Domain-neutral geometry lives in `claudecad/`
-(`core/`, `verify.py`, `assembly.py`); domain packs (e.g. `jewelry/`) hold
-reusable parts for a design family. `tools/` is the only layer that touches
-disk/Blender.
+(`core/`, `verify.py`, `assembly.py`); domain packs (e.g. `jewelry/`,
+`hardware/`) hold reusable parts for a design family. `tools/` is the only
+layer that touches disk/Blender.
 
 ## The loop
 
