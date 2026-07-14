@@ -21,7 +21,7 @@ class BoxClaspParams:
     retuned from the plan's static prediction (1.2 / 1.6) down to 0.8 / 0.8:
     the original pair made 2*wall+blade_t+leaf_t+spring_lift=6.4 exceed
     box_h=5.2 by 1.2mm, an unconditional geometric impossibility (box_h is
-    fixed by the chain interface, so it can't move) — see task-2-report.md."""
+    fixed by the chain interface, so it can't move)."""
 
     box_l: float = 14.0
     box_w: float = 15.0
@@ -85,6 +85,12 @@ def _centered_box(l, w, h):
     return Pos(l / 2, 0, 0) * Box(l, w, h)
 
 
+def _ear_w(p: BoxClaspParams) -> float:
+    """Y-width of each rear lug ear (clasp_box, clasp_tongue): the box
+    width split by the _EAR_GAP center gap, inset 1.0mm from the outer face."""
+    return (p.box_w - _EAR_GAP) / 2 - 1.0
+
+
 def clasp_box(p: BoxClaspParams) -> Solid:
     """Hollow box: cavity opening at x=0 (mouth), retention lip across the
     cavity top at the mouth, button slot through the top, rear lug + bar."""
@@ -111,7 +117,7 @@ def clasp_box(p: BoxClaspParams) -> Solid:
     )
     body = body - slot
     # rear lug: two ears + bar for the end link
-    ear_w = (p.box_w - _EAR_GAP) / 2 - 1.0
+    ear_w = _ear_w(p)
     for sy in (+1, -1):
         ear = Pos(p.box_l + p.lug_l / 2,
                   sy * (_EAR_GAP / 2 + ear_w / 2), 0) * Box(p.lug_l, ear_w, p.box_h)
@@ -188,7 +194,7 @@ def clasp_tongue(p: BoxClaspParams, state: str) -> Solid:
     )
     tongue = tongue + button
     # tongue lug + bar (mirror of the box lug, on -X side)
-    ear_w = (p.box_w - _EAR_GAP) / 2 - 1.0
+    ear_w = _ear_w(p)
     for sy in (+1, -1):
         ear = Pos(-p.lug_l / 2, sy * (_EAR_GAP / 2 + ear_w / 2), 0) * Box(
             p.lug_l, ear_w, p.box_h
@@ -327,7 +333,7 @@ def attachment_loop(p: BoxClaspParams, end: str) -> np.ndarray:
     return leg, deep inside the box/tongue body and outside any real end
     link's footprint -- so that crossing doesn't also land inside a link's
     hole and cancel the first one (two crossings under the SAME hole net
-    to Lk=0, exactly like the flat rectangle; see task-3-report.md).
+    to Lk=0, exactly like the flat rectangle).
     """
     if end == "box":
         bx = p.box_l + p.lug_l - p.bar_d / 2 - 0.5

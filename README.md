@@ -21,7 +21,7 @@ truth and renders are not evidence**:
 1. Dimensions live in one `params.py` per design.
 2. `uv run python -m designs.<name>.build` builds solids and runs the gate:
    - **interlock** proven by the Gauss linking number of part centerlines,
-   - **clearance** proven by exact boolean intersection (must be 0),
+   - **non-interpenetration** proven by exact boolean intersection (must be 0),
    - **mechanisms** proven by constructed states — e.g. a clasp tongue is
      built in relaxed AND compressed states; the gate asserts the compressed
      state slides free while the relaxed state is blocked (that differential
@@ -59,7 +59,8 @@ The repo ships a project skill (`.claude/skills/cad/SKILL.md`) that teaches
 Claude the loop and its non-negotiable rules (mm-only params, never render
 unverified geometry, never weaken a check, constructed-state mechanism
 proofs). Open the repo in Claude Code and ask for a design; the skill does
-the rest.
+the rest. Start a new piece from `designs/_template/` — the step-by-step
+guide is [docs/new-design-recipe.md](docs/new-design-recipe.md).
 
 ## What's here
 
@@ -67,7 +68,9 @@ the rest.
 claudecad/            domain-neutral core
   core/               exact centerline math (planar + twisted)
   verify.py           the gate: linking number, intersection, path clearance
+  assembly.py         assembly finishing (relief cuts)
   jewelry/            DOMAIN PACK: links, chains, clasps, diamond-cut
+  hardware/           DOMAIN PACK: carabiner (spring gate)
 designs/              examples — each is params.py + build.py with a gate
 tools/                STEP/GLB export, Blender renderer, web STEP viewer
 docs/superpowers/     the evidence trail (specs + plans, dated)

@@ -157,3 +157,24 @@ def test_path_clearance_validation():
         path_clearance(Box(1, 1, 1), Box(1, 1, 1), axis=(1, 0, 0), distance=1, n=1)
     with pytest.raises(ValueError):
         path_clearance(Box(1, 1, 1), Box(1, 1, 1), axis=(0, 0, 0), distance=1, n=3)
+
+
+def test_clearance_exact_distances():
+    from claudecad.verify import clearance
+    assert clearance(Box(10, 10, 10), Pos(20, 0, 0) * Box(10, 10, 10)) == pytest.approx(10.0, abs=1e-9)
+    assert clearance(Box(10, 10, 10), Pos(10, 0, 0) * Box(10, 10, 10)) == pytest.approx(0.0, abs=1e-9)
+
+
+def test_check_chain_max_gap_flags_loose_neighbors():
+    """Hopf pair is linked but its tubes sit ~1.8mm apart at closest
+    approach (R=10 circles offset 10, minor 1.5: min centerline distance
+    ~4.8mm... measured, not assumed: assert against the measured value)."""
+    from claudecad.verify import clearance
+    items = _hopf_tori()
+    measured = clearance(items[0][0], items[1][0])
+    assert measured > 0.0
+    tight = check_chain(items, max_gap=measured + 0.5)
+    assert tight.ok, tight.failures()
+    strict = check_chain(items, max_gap=measured / 2)
+    assert not strict.ok
+    assert any("gap" in f for f in strict.failures())
