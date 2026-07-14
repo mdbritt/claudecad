@@ -69,6 +69,7 @@ claudecad/            domain-neutral core
   core/               exact centerline math (planar + twisted)
   verify.py           the gate: linking number, intersection, path clearance
   jewelry/            DOMAIN PACK: links, chains, clasps, diamond-cut
+  hardware/           DOMAIN PACK: carabiner (spring gate)
 designs/              examples — each is params.py + build.py with a gate
 tools/                STEP/GLB export, Blender renderer, web STEP viewer
 docs/superpowers/     the evidence trail (specs + plans, dated)
