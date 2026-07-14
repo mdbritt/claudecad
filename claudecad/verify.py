@@ -229,12 +229,14 @@ def screw_clearance(moving, fixed, axis, center, lead: float, turns: float,
     a = a.normalized()
     c = tuple(Vector(*center))
     ad = tuple(a)
+    cx, cy, cz = (float(v) for v in center)
     out = []
     for i in range(n):
         frac = i / (n - 1)
         angle = 360.0 * turns * frac
         axial = lead * turns * frac
-        placed = Pos(a.X * axial, a.Y * axial, a.Z * axial) * \
-            Location(c, ad, angle) * moving
+        rotated = Pos(cx, cy, cz) * Location((0, 0, 0), ad, angle) \
+            * Pos(-cx, -cy, -cz) * moving
+        placed = Pos(a.X * axial, a.Y * axial, a.Z * axial) * rotated
         out.append(intersection_volume(placed, fixed))
     return out

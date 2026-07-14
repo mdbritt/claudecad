@@ -221,3 +221,20 @@ def test_screw_clearance_guards():
     with pytest.raises(ValueError):
         screw_clearance(Box(1, 1, 1), Box(1, 1, 1), (0, 0, 0), (0, 0, 0),
                         1.0, 1.0, 5)
+
+
+def test_screw_clearance_offorigin_center_station0_rest_pose():
+    """Regression: station 0 must equal the untransformed rest-pose interference,
+    even with an off-origin rotation center. This test would fail on the buggy code
+    that rotates about the origin instead of the axis through center."""
+    from build123d import Box, Pos
+    from claudecad.verify import screw_clearance, intersection_volume
+    # Both boxes at (3, 0, 0), fully overlapping => 8.0 mm^3 when untransformed
+    moving = Pos(3, 0, 0) * Box(2, 2, 2)
+    fixed = Pos(3, 0, 0) * Box(2, 2, 2)
+    expected_rest = intersection_volume(moving, fixed)
+    vals = screw_clearance(moving, fixed, axis=(0, 0, 1), center=(3, 0, 0),
+                           lead=1.0, turns=1.0, n=5)
+    # Station 0 must match the untransformed intersection volume
+    assert abs(vals[0] - expected_rest) < 1e-9, \
+        f"station 0 interference {vals[0]} != rest pose {expected_rest}"
