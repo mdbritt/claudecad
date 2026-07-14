@@ -10,6 +10,9 @@ code; geometry ships only after machine-checkable proofs pass — topological
 interlock, zero-interpenetration, working mechanisms — and lands in your CAD
 app (tested with Plasticity) as named, editable NURBS via STEP.
 
+**DISCLAIMER: entirely vibe coded with Fable 5, works best with 
+your already exisiting Claude Max Subscription, assuming of course, you have one.**
+
 ![bracelet](docs/images/bracelet-persp.png)
 
 ## Why this exists
