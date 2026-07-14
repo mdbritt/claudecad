@@ -21,7 +21,7 @@ class BoxClaspParams:
     retuned from the plan's static prediction (1.2 / 1.6) down to 0.8 / 0.8:
     the original pair made 2*wall+blade_t+leaf_t+spring_lift=6.4 exceed
     box_h=5.2 by 1.2mm, an unconditional geometric impossibility (box_h is
-    fixed by the chain interface, so it can't move) — see task-2-report.md."""
+    fixed by the chain interface, so it can't move)."""
 
     box_l: float = 14.0
     box_w: float = 15.0
@@ -333,7 +333,7 @@ def attachment_loop(p: BoxClaspParams, end: str) -> np.ndarray:
     return leg, deep inside the box/tongue body and outside any real end
     link's footprint -- so that crossing doesn't also land inside a link's
     hole and cancel the first one (two crossings under the SAME hole net
-    to Lk=0, exactly like the flat rectangle; see task-3-report.md).
+    to Lk=0, exactly like the flat rectangle).
     """
     if end == "box":
         bx = p.box_l + p.lug_l - p.bar_d / 2 - 0.5

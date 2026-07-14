@@ -21,7 +21,7 @@ truth and renders are not evidence**:
 1. Dimensions live in one `params.py` per design.
 2. `uv run python -m designs.<name>.build` builds solids and runs the gate:
    - **interlock** proven by the Gauss linking number of part centerlines,
-   - **clearance** proven by exact boolean intersection (must be 0),
+   - **non-interpenetration** proven by exact boolean intersection (must be 0),
    - **mechanisms** proven by constructed states — e.g. a clasp tongue is
      built in relaxed AND compressed states; the gate asserts the compressed
      state slides free while the relaxed state is blocked (that differential

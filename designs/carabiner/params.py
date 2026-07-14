@@ -1,8 +1,7 @@
 """Snap-gate carabiner — every driving dimension, in mm.
 
 Single instance of the hardware pack's CarabinerParams (module defaults
-were verified 5/5 in tests/test_carabiner.py; see task-10a-report.md for
-the escape-ring derivation). Values here are the DESIGN's choices and may
+were verified 5/5 in tests/test_carabiner.py). Values here are the DESIGN's choices and may
 drift from the module defaults as the visual pass tunes proportions —
 the build gate recomputes every functional check on THIS instance.
 

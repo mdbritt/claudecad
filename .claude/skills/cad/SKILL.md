@@ -52,6 +52,7 @@ layer that touches disk/Blender.
 - **Attachment** is proven by linking number against a closed loop through
   the mounting circuit — the loop must genuinely cross the other part's
   plane (a coplanar loop can never link).
+- **Clearance/fit** is measured by `verify.clearance(a, b)` — exact minimum distance, 0.0 when touching or penetrating (pair with intersection to distinguish). Near-contact fits gate via `check_chain(..., max_gap=...)`: adjacent pairs must sit within the band, not merely avoid penetration.
 
 ## Construction laws (OCCT, hard-won — see the dated specs for evidence)
 

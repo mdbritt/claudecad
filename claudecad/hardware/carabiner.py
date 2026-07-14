@@ -12,9 +12,8 @@ Functionality is proven statically per the /cad skill: parts are separate
 manifold solids with real air gaps at every joint (never touching booleans
 between DIFFERENT parts), and the mechanism is proven by constructed states
 -- `carabiner_gate` closed vs. open -- gated on `verify.path_clearance`
-along `ESCAPE_AXIS`: closed blocks a ring's escape, open does not. See
-task-10a-report.md for the numeric derivation of the escape-ring pose and
-the empirical margin against the open gate's swept volume.
+along `ESCAPE_AXIS`: closed blocks a ring's escape, open does not. The
+pose and margin are empirically tuned and verified in tests.
 """
 from __future__ import annotations
 
@@ -173,7 +172,7 @@ def carabiner_gate(p: CarabinerParams, state: Literal["closed", "open"]) -> Soli
     Open: rotated `GATE_OPEN_DEG` INWARD -- empirically, negative Z-rotation
     swings the tip toward -Y (into the loop interior) given the pivot sits
     at the -X end and the rod runs toward +X; verified by probing the tip's
-    transformed position (task-10a-report.md)."""
+    transformed position."""
     if state not in ("closed", "open"):
         raise ValueError(f"state must be 'closed' or 'open', got {state!r}")
     y_gap = _y_gap(p)
@@ -226,7 +225,7 @@ def closed_circuit(p: CarabinerParams, n: int = 256) -> np.ndarray:
 
 def _ring_geometry(p: CarabinerParams) -> tuple[float, float, float, float]:
     """Escape ring pose (x, y, major_r, minor_r), derived from p and
-    empirically verified (task-10a-report.md) against the default params:
+    empirically verified against the default params:
     offset toward the nose side of the gap (0.75 of the way out) where the
     pivot-to-point lever arm is longest, so the open gate's swept position
     is furthest from the gate line in Y -- that margin is what keeps the
@@ -268,5 +267,5 @@ def escape_distance(p: CarabinerParams) -> float:
     """Translation distance along ESCAPE_AXIS that carries the escape ring
     from its resting pose to clearly past the body's outer envelope
     (body_w/2 past the gap line clears every boss/recess feature, verified
-    empirically for the default params -- task-10a-report.md)."""
+    empirically for the default params)."""
     return p.body_w / 2
