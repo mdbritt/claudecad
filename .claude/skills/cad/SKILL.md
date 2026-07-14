@@ -74,7 +74,9 @@ disk/Blender.
   Dense chains may thread depth 2 (`interlock_depth`). Real cuban pitch ≈
   0.49 × link length; the look comes from flat lie + diamond-cut facets.
 - `finishing.diamond_cut` grinds an assembled chain flat (slab intersection,
-  severing caught by piece_count); relief slots via `assembly.relieve`.
+  severing caught by piece_count); relief slots via `assembly.relieve` (or
+  `assembly.expand` composition when cutters are shared/expensive — see
+  cuban_bracelet).
 
 ## Blender renderer
 

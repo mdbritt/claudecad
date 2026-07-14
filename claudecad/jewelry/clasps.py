@@ -85,6 +85,12 @@ def _centered_box(l, w, h):
     return Pos(l / 2, 0, 0) * Box(l, w, h)
 
 
+def _ear_w(p: BoxClaspParams) -> float:
+    """Y-width of each rear lug ear (clasp_box, clasp_tongue): the box
+    width split by the _EAR_GAP center gap, inset 1.0mm from the outer face."""
+    return (p.box_w - _EAR_GAP) / 2 - 1.0
+
+
 def clasp_box(p: BoxClaspParams) -> Solid:
     """Hollow box: cavity opening at x=0 (mouth), retention lip across the
     cavity top at the mouth, button slot through the top, rear lug + bar."""
@@ -111,7 +117,7 @@ def clasp_box(p: BoxClaspParams) -> Solid:
     )
     body = body - slot
     # rear lug: two ears + bar for the end link
-    ear_w = (p.box_w - _EAR_GAP) / 2 - 1.0
+    ear_w = _ear_w(p)
     for sy in (+1, -1):
         ear = Pos(p.box_l + p.lug_l / 2,
                   sy * (_EAR_GAP / 2 + ear_w / 2), 0) * Box(p.lug_l, ear_w, p.box_h)
@@ -188,7 +194,7 @@ def clasp_tongue(p: BoxClaspParams, state: str) -> Solid:
     )
     tongue = tongue + button
     # tongue lug + bar (mirror of the box lug, on -X side)
-    ear_w = (p.box_w - _EAR_GAP) / 2 - 1.0
+    ear_w = _ear_w(p)
     for sy in (+1, -1):
         ear = Pos(-p.lug_l / 2, sy * (_EAR_GAP / 2 + ear_w / 2), 0) * Box(
             p.lug_l, ear_w, p.box_h

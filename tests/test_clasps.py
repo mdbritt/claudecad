@@ -133,3 +133,15 @@ def test_attachment_loop_links_end_link():
     )
     lk = linking_number(loop, np.asarray(link_curve))
     assert abs(round(lk)) == 1 and abs(lk - round(lk)) < 0.1
+
+
+def test_attachment_loop_tongue_end_links():
+    """Mirror of test_attachment_loop_links_end_link for the tongue-side lug."""
+    p = BoxClaspParams()
+    loop = attachment_loop(p, "tongue")
+    lp = LinkParams(length=20.0, width=15.0, wire_d=4.0)
+    _, wire = curb_link(lp)
+    bar_x = -p.lug_l + p.bar_d / 2 + 0.5
+    link_curve = discretize(Pos(bar_x - (10.0 - lp.wire_d), 0, 0) * wire, 256)
+    lk = linking_number(loop, np.asarray(link_curve))
+    assert abs(round(lk)) == 1 and abs(lk - round(lk)) < 0.1

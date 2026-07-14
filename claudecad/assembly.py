@@ -46,6 +46,10 @@ def relieve(target, cutters, clearance: float) -> Solid:
     zero intersection against it, regardless of tier 1's precision.
 
     Raises ValueError if `clearance` is negative or `cutters` is empty.
+
+    Caveat: clearance=0.0 passes validation but makes `expand` a degenerate
+    coincident-copy fuse (forbidden by the construction laws); use a
+    positive clearance.
     """
     if clearance < 0:
         raise ValueError(f"need clearance >= 0, got {clearance}")

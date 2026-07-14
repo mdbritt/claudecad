@@ -52,6 +52,7 @@ def main() -> int:
     # Pos centers the part span (span center = box_l/2 after the flip) and
     # seats the box-end corners on the band-centerline chord:
     # y_c = -sqrt(R^2 - (box_l/2)^2).
+    # gap_start/gap_end are probe-only; y_c chord math is authoritative.
     asm = box_clasp(CLASP)
     y_c = -math.sqrt(info.radius**2 - (CLASP.box_l / 2) ** 2)
     clasp_loc = Pos(CLASP.box_l / 2, y_c, 0) * Rot(Z=180)

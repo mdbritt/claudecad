@@ -161,7 +161,8 @@ def check_chain(items: Sequence[tuple], closed: bool = False, interlock_depth: i
 
     If max_gap is set, adjacent pairs (within interlock_depth) must satisfy
     clearance <= max_gap (near-contact band: 0.0 for touching up to max_gap).
-    max_gap must be non-negative; raises ValueError if max_gap <= 0.
+    max_gap must be positive; raises ValueError if max_gap <= 0.
+    Penetration is still caught by the intersection check regardless of max_gap.
     """
     if interlock_depth < 1:
         raise ValueError(f"need interlock_depth >= 1, got {interlock_depth}")

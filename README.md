@@ -68,6 +68,7 @@ guide is [docs/new-design-recipe.md](docs/new-design-recipe.md).
 claudecad/            domain-neutral core
   core/               exact centerline math (planar + twisted)
   verify.py           the gate: linking number, intersection, path clearance
+  assembly.py         assembly finishing (relief cuts)
   jewelry/            DOMAIN PACK: links, chains, clasps, diamond-cut
   hardware/           DOMAIN PACK: carabiner (spring gate)
 designs/              examples — each is params.py + build.py with a gate

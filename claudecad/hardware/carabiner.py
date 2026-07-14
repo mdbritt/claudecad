@@ -112,6 +112,11 @@ def _nose_x(p: CarabinerParams) -> float:
     return p.gap_l / 2
 
 
+def _y_gap(p: CarabinerParams) -> float:
+    """Y-coordinate of the gate opening on the +Y straight (== end_radius)."""
+    return p.end_radius
+
+
 def _pin_bore_r(p: CarabinerParams) -> float:
     return p.pin_d / 2 + p.clearance
 
@@ -127,8 +132,13 @@ def carabiner_body(p: CarabinerParams) -> Solid:
     what keeps `intersection_volume(carabiner_body(p), carabiner_gate(p,
     "closed")) == 0` (see test_closed_assembly_clear) robust rather than a
     coincident-face fluke.
+
+    The boss's own bore (pivot_bore below) only holds ~half the pin's
+    length; the gate's coaxial bore (carabiner_gate) completes it -- the
+    pin is jointly captured by both bores only once body and gate are
+    assembled at the hinge.
     """
-    y_gap = p.end_radius
+    y_gap = _y_gap(p)
     x_piv, x_nose = _pivot_x(p), _nose_x(p)
 
     w = stadium_wire(p.straight, p.end_radius)
@@ -166,7 +176,7 @@ def carabiner_gate(p: CarabinerParams, state: Literal["closed", "open"]) -> Soli
     transformed position (task-10a-report.md)."""
     if state not in ("closed", "open"):
         raise ValueError(f"state must be 'closed' or 'open', got {state!r}")
-    y_gap = p.end_radius
+    y_gap = _y_gap(p)
     x_piv, x_nose = _pivot_x(p), _nose_x(p)
     x_tip = x_nose + p.nose_depth - p.clearance
     length = x_tip - x_piv
@@ -186,7 +196,7 @@ def carabiner_pin(p: CarabinerParams) -> Solid:
     carabiner_gate); radius pin_d/2 stays inside both bores' pin_d/2+
     clearance, so it never touches either -- zero intersection with body
     or gate by construction, same pattern as jewelry.clasps.clasp_pin."""
-    y_gap = p.end_radius
+    y_gap = _y_gap(p)
     x_piv = _pivot_x(p)
     return Pos(x_piv, y_gap, 0) * Cylinder(p.pin_d / 2, p.wire_d + _BOSS_COLLAR)
 
@@ -198,7 +208,7 @@ def closed_circuit(p: CarabinerParams, n: int = 256) -> np.ndarray:
     `stadium_wire`/`discretize` trace the +Y straight first and left-to-
     right, so the masked run is contiguous and already x-increasing; the
     chord resample preserves that order."""
-    y_gap = p.end_radius
+    y_gap = _y_gap(p)
     x_piv, x_nose = _pivot_x(p), _nose_x(p)
     pts = discretize(stadium_wire(p.straight, p.end_radius), n)
     mask = (
@@ -225,7 +235,9 @@ def _ring_geometry(p: CarabinerParams) -> tuple[float, float, float, float]:
     crossing of the ring's core circle lands inside the body's enclosed
     loop and the other lands outside (required for Lk=+-1 against a
     flat, z=0 closed_circuit -- see jewelry.clasps.attachment_loop for the
-    same coplanar-curves-can't-link reasoning)."""
+    same coplanar-curves-can't-link reasoning). These constants are
+    numerically tuned at CarabinerParams defaults only and are unverified
+    for arbitrary param overrides."""
     x_ring = 0.75 * (p.gap_l / 2)
     y_ring = p.end_radius + 0.5
     major_r = p.gate_d / 2 - 1.0
