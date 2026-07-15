@@ -75,7 +75,12 @@ class FastenerParams:
         return self.major_d / 2 - 5 * self.H / 8
 
 
-_SEGMENTS_PER_TURN = 1
+_SEGMENTS_PER_TURN = 8  # sub-turn segments of the swept EXPORT thread. Only
+                        # affects the 3D solids shipped to STEP/GLB (smoother
+                        # helix at higher K); the mesh gate is analytic
+                        # (thread_mesh_gap) and never touches the swept solid,
+                        # so raising K costs nothing at verification time —
+                        # a ~2s one-time export build for a clean-looking thread.
 _CORE_OVERLAP = 0.02  # core sits this far above the ridge root -> manifold fuse
                       # (a tangent core makes non-manifold seams; verified).
                       # This is the one place the swept 3D solid and the

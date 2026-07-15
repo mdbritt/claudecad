@@ -25,8 +25,10 @@ from .params import P
 def main() -> int:
     b, n = bolt(P), seated_nut(P)
     parts = {"bolt": b, "nut": n}
-    export_glb(parts, "out/glb/bolt.glb", linear_deflection=0.01,
-               angular_deflection=0.1)
+    # fine tessellation — the thread helix needs a small angular deflection or
+    # it facets into a coarse ribbon in the GLB (the STEP is exact B-rep)
+    export_glb(parts, "out/glb/bolt.glb", linear_deflection=0.004,
+               angular_deflection=0.02)
 
     ok = True
     for name, s in parts.items():
