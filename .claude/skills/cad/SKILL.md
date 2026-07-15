@@ -49,6 +49,10 @@ layer that touches disk/Blender.
   clears; guards = the blocked motion's station intersects the guard part.
   Functional gates run in the part's LOCAL frame (rigid-invariant) and
   ALWAYS on the shipped (post-finishing) geometry.
+- **Threaded / screw joint** (`hardware/fastener`): a threaded joint is
+  proven by the exact 2D axial-section clearance (helical symmetry) — a
+  real air gap on the true pitch, jamming under pure-axial shift and wrong
+  pitch; the swept 3D solid is gated valid+manifold for export.
 - **Attachment** is proven by linking number against a closed loop through
   the mounting circuit — the loop must genuinely cross the other part's
   plane (a coplanar loop can never link).
