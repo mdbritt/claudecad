@@ -178,3 +178,63 @@ def test_check_chain_max_gap_flags_loose_neighbors():
     strict = check_chain(items, max_gap=measured / 2)
     assert not strict.ok
     assert any("gap" in f for f in strict.failures())
+
+
+def test_screw_clearance_station0_is_rest_pose():
+    from build123d import Box, Pos
+    from claudecad.verify import screw_clearance, intersection_volume
+    a = Box(2, 2, 2)
+    b = Pos(1, 0, 0) * Box(2, 2, 2)
+    vals = screw_clearance(a, b, axis=(0, 0, 1), center=(0, 0, 0),
+                           lead=1.0, turns=1.0, n=5)
+    assert abs(vals[0] - intersection_volume(a, b)) < 1e-9
+
+
+def test_screw_clearance_axisymmetric_shape_is_invariant_under_pure_rotation():
+    # a cylinder on the Z axis is unchanged by Z-rotation; lead=0 => all equal
+    from build123d import Cylinder, Pos
+    from claudecad.verify import screw_clearance
+    moving = Cylinder(1.0, 4.0)
+    fixed = Pos(0.5, 0, 0) * Cylinder(1.0, 4.0)
+    vals = screw_clearance(moving, fixed, axis=(0, 0, 1), center=(0, 0, 0),
+                           lead=0.0, turns=1.0, n=6)
+    assert max(vals) - min(vals) < 1e-6
+
+
+def test_screw_clearance_offaxis_shape_varies_under_pure_rotation():
+    from build123d import Box, Pos
+    from claudecad.verify import screw_clearance
+    moving = Pos(1.2, 0, 0) * Box(1, 1, 4)
+    fixed = Pos(1.2, 0, 0) * Box(1, 1, 4)
+    vals = screw_clearance(moving, fixed, axis=(0, 0, 1), center=(0, 0, 0),
+                           lead=0.0, turns=1.0, n=9)
+    assert vals[0] > 0.0 and max(vals) - min(vals) > 1e-3
+
+
+def test_screw_clearance_guards():
+    import pytest
+    from build123d import Box
+    from claudecad.verify import screw_clearance
+    with pytest.raises(ValueError):
+        screw_clearance(Box(1, 1, 1), Box(1, 1, 1), (0, 0, 1), (0, 0, 0),
+                        1.0, 1.0, 1)
+    with pytest.raises(ValueError):
+        screw_clearance(Box(1, 1, 1), Box(1, 1, 1), (0, 0, 0), (0, 0, 0),
+                        1.0, 1.0, 5)
+
+
+def test_screw_clearance_offorigin_center_station0_rest_pose():
+    """Regression: station 0 must equal the untransformed rest-pose interference,
+    even with an off-origin rotation center. This test would fail on the buggy code
+    that rotates about the origin instead of the axis through center."""
+    from build123d import Box, Pos
+    from claudecad.verify import screw_clearance, intersection_volume
+    # Both boxes at (3, 0, 0), fully overlapping => 8.0 mm^3 when untransformed
+    moving = Pos(3, 0, 0) * Box(2, 2, 2)
+    fixed = Pos(3, 0, 0) * Box(2, 2, 2)
+    expected_rest = intersection_volume(moving, fixed)
+    vals = screw_clearance(moving, fixed, axis=(0, 0, 1), center=(3, 0, 0),
+                           lead=1.0, turns=1.0, n=5)
+    # Station 0 must match the untransformed intersection volume
+    assert abs(vals[0] - expected_rest) < 1e-9, \
+        f"station 0 interference {vals[0]} != rest pose {expected_rest}"

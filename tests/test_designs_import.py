@@ -6,7 +6,8 @@ import importlib
 
 import pytest
 
-DESIGNS = ["designs.carabiner.build", "designs.carabiner.params",
+DESIGNS = ["designs.bolt.build", "designs.bolt.params",
+           "designs.carabiner.build", "designs.carabiner.params",
            "designs.cuban_bracelet.build", "designs.cuban_bracelet.params",
            "designs.cuban_bracelet.probe", "designs.simple_curb.build",
            "designs.simple_curb.params", "designs._template.build",
