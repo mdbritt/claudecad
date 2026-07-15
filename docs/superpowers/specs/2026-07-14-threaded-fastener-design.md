@@ -1,7 +1,7 @@
 # Threaded fastener — claudeCAD hardware pack, generality Phase 1
 
 **Date:** 2026-07-14
-**Status:** Approved
+**Status:** Approved; **amended 2026-07-15 — see the Amendment below, which supersedes the boolean 3-leg gate.**
 **Predecessors:** 2026-07-12-claudecad-design.md (the verification-first core),
 2026-07-13-open-source-release-design.md (v4: the `hardware/` domain pack and
 the carabiner, this piece's sibling and the current generality proof)
@@ -11,6 +11,56 @@ This is **Phase 1 of a three-piece hardware roadmap** (bolt+nut → ball bearing
 in `claudecad/hardware/`. The pieces are ordered so Phase 1 builds the most
 general new verification machinery and later phases reuse it (see
 `screw_clearance` below).
+
+## Amendment (2026-07-15): analytic mesh gate supersedes the boolean 3-leg differential
+
+Implementation (16 design spikes + the Task-3 review) proved the original
+boolean approach below is the **wrong tool for a thread**, and this amendment
+replaces it. What changed and why:
+
+- **Boolean interference fits *clearance* mechanisms, not *contact* ones.** The
+  carabiner/clasp verify crisply because their parts never touch (real air gaps
+  → interference exactly 0). A thread is defined by flanks bearing on each
+  other, so its working surfaces are in near-contact, and OCCT booleans on two
+  meshing swept helicoids produce irreducible facet noise (~0.37 mm³/turn). The
+  "rest interference == 0" of proof 5 is unachievable on the real swept solid.
+- **A swept multi-turn helix also drifts** (not pitch-periodic); stacking one
+  swept turn at exact pitch fixes periodicity, and the core cylinder must
+  **overlap** the ridge (not sit tangent) or the fused solid is non-manifold.
+  So the swept 3D thread is real but carries tessellation-level fuzz at contact.
+- **The analytic route — previously rejected — is actually the ground truth
+  for a thread.** For two coaxial same-pitch threads, helical symmetry makes
+  the 3D mesh *exactly* reducible to the 2D axial cross-section (the standard
+  way threads are analyzed). Each surface is a single-valued sawtooth `r(z)`;
+  the parts interfere iff `r_bolt(z) ≥ r_nut(z)` somewhere, so
+  `min_z (r_nut(z) − r_bolt(z))` is the **exact** signed clearance — positive is
+  a real air gap, ≤ 0 is a jam. No facets, exact, milliseconds. Verified:
+  mesh gap = the design clearance exactly (e.g. +0.08 mm at allowance 0.08),
+  axial-shift and wrong-pitch both cleanly negative, with correct backlash.
+
+**Revised gate (this is what ships):**
+1. **Parts valid + manifold** — the swept 3D bolt/nut (corrected manifold
+   construction) are built for the STEP/GLB export and gated on
+   `valid ∧ manifold ∧ single-solid`.
+2. **Mesh free (real air gap):** `thread_mesh_gap` (2D `r(z)` min-gap at the
+   meshed phase) `> 0` — a genuine positive clearance, the shippable air gap.
+3. **Axial-only blocked:** shift the bolt profile axially past the backlash
+   (no rotation) → min-gap `< 0` (the helix constrains motion).
+4. **Wrong-pitch blocked:** the nut profile at an off pitch → the phase drifts
+   over the engagement → min-gap `< 0` (the pitch is a real property).
+
+The manifold construction (corrected): reduce crest and root radii by the
+clearance but evaluate the flank half-widths at the **shifted** radii (keeps
+the flanks 60° through the pitch line, no pitch-diameter misalignment — a plain
+2D `offset` raises the root above the nut crest and a naive radial shift
+misaligns the pitch), with a small core overlap for manifoldness. `screw_clearance`
+is retained (Task 1, done) as a general primitive that Phase 2's bearing reuses
+at `lead=0`; it is no longer the bolt's mesh gate. "Verify what you ship"
+holds: the analytic gate verifies the exact profile the swept solid realizes,
+and the swept solid itself is gated valid+manifold.
+
+The sections below are the **original (superseded) boolean design**, kept for
+the rationale and the ISO geometry, which the amendment reuses.
 
 ## Problem
 
