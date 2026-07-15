@@ -22,3 +22,12 @@ def test_params_validation():
     with pytest.raises(ValueError):
         # the nut must be shorter than the shank so it runs down a longer bolt
         FastenerParams(bolt_turns=3, nut_turns=3)
+
+
+def test_threads_are_clean_manifold_solids():
+    from claudecad.verify import check_solid
+    from claudecad.hardware.fastener import external_thread, internal_thread
+    p = FastenerParams()
+    for name, s in (("external", external_thread(p)), ("internal", internal_thread(p))):
+        r = check_solid(s)
+        assert r.ok, f"{name} not clean: valid={r.is_valid} manifold={r.is_manifold} pieces={r.piece_count}"
