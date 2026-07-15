@@ -62,10 +62,16 @@ method law):
    and lid knuckles (never touching — bores at `pin_d/2 + clearance`, the
    carabiner pin pattern); with knuckles present the pin's radial escape is
    blocked, axially blocked by end knuckles (escape differentials).
-5. **Negative control (house standard since Phase 2):** a defective base
-   whose knuckle bores are displaced off the pin axis must FAIL the
-   swing-arc gate — proving the sweep detects a mis-built hinge rather than
-   assuming a correct one.
+5. **Negative control (house standard since Phase 2):** *(amended after the
+   milestone-1 spike — the originally planned "displaced knuckle bores"
+   control cannot work: displacing a BORE removes different material but
+   does not move the knuckle solid, so nothing collides.)* The working
+   control: sweep the lid about a **displaced center** (the hinge point
+   offset 0.5 mm off the true axis) — the sweep must FAIL, proving the gate
+   detects a mis-built hinge axis. This directly pins the off-origin
+   `center` semantics (it would have caught the original `screw_clearance`
+   center bug) — a stronger control than the one it replaces. Verified:
+   max interference ≈29 mm³, growing with angle.
 
 Plus standing proofs: every part `check_solid(...).ok` (valid ∧ manifold ∧
 single, corrected test), and the shipped pose (closed, relaxed latch, pin
@@ -108,10 +114,13 @@ knuckles interleaved along the 40 mm back edge; hinge axis parallel to X at
 roughly (y = −15, z = 15) in the box frame — deliberately far from the world
 origin. Swing 0→90° closed→open; stop at ~100°. Latch: tab 8 wide × 1.6
 thick, catch depth 1.2, deflection 1.6 (≥ catch depth + clearance).
-`clearance` 0.15 (clasp's slide-fit value); near-contact band for the
-shipped pose via the existing `verify.clearance` (`SEATED_MAX_GAP`-style
-fixture). All validated with value-carrying inequalities (deflection must
-clear the catch; stop_deg > swing_deg; knuckle interleave must fit the edge).
+`clearance` 0.15 (clasp's slide-fit value); the shipped pose's gaps are
+asserted equal to `clearance` exactly via `verify.clearance` (amended: exact
+equality, stronger than the originally planned band fixture). All validated
+with value-carrying inequalities (deflection must clear the catch;
+stop_deg > swing_deg; knuckle interleave must fit the edge). *(Amended:
+hinge height is DERIVED — `base_h + knuckle_d/2 + clearance` — the spike
+caught an exact knuckle-to-wall tangency at the originally drafted 15.0.)*
 
 ## Components
 
@@ -127,10 +136,13 @@ clear the catch; stop_deg > swing_deg; knuckle interleave must fit the edge).
   POSE (the swing gate rotates it open — constructed states live at the
   gate's station 0, mirroring `seated_nut`).
 - `hinge_pin(p) -> Solid`.
-- `base_misaligned(p, offset) -> Solid` — negative-control base (knuckle
-  bores displaced off the hinge axis).
-- Module gate fixtures (one source): `SWING_STATIONS`, `OVERTRAVEL_STATIONS`,
-  `OPEN_BLOCK_MIN_DEG`, `SEATED_MAX_GAP`, escape distances.
+- *(amended: no `base_misaligned` part — the negative control is a displaced
+  sweep CENTER, needing no defective geometry; see proof 5.)*
+- Module gate fixtures (one source): `SWING_STATIONS`,
+  `OVERTRAVEL_SPAN_DEG`/`OVERTRAVEL_STATIONS`, `OPEN_FREE_MAX_DEG`/
+  `BLOCKED_BY_DEG`, `RETENTION_SPAN_DEG`/`RETENTION_STATIONS`,
+  `NEG_CENTER_OFFSET`, `pin_escape_distance` (the shipped-pose gap is
+  asserted equal to `clearance` exactly — stronger than a band fixture).
 
 ### `claudecad/verify.py`
 - No changes expected (`screw_clearance` covers arcs). If the spike shows
@@ -153,7 +165,7 @@ clear the catch; stop_deg > swing_deg; knuckle interleave must fit the edge).
 - Unit: params validation inequalities; parts clean; two lid states differ
   only in the tab region (volume delta bounded, knuckles identical).
 - Functional: the five proofs above, each a test + a design-gate print.
-- Negative control: `base_misaligned` fails the swing gate.
+- Negative control: the displaced-center sweep fails the swing gate.
 - Integration: full gate green; STEP round-trips named parts; designs-import
   registration.
 - Visual: renders vs a real hinged snap box reference (e.g. a parts organizer
