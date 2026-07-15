@@ -28,6 +28,11 @@ replaces it. What changed and why:
   swept turn at exact pitch fixes periodicity, and the core cylinder must
   **overlap** the ridge (not sit tangent) or the fused solid is non-manifold.
   So the swept 3D thread is real but carries tessellation-level fuzz at contact.
+  *(Corrected 2026-07-15 post-ship: even a single-turn `sweep()` tilts the
+  profile — OCCT's sweep frame drifts within the turn, rendering as stacked
+  discs, not a continuous spiral. The shipped construction LOFTS explicitly
+  axial-radial-oriented sections per turn — the bd_warehouse Thread technique —
+  then stacks per pitch. Same periodicity, correct continuous-spiral geometry.)*
 - **The analytic route — previously rejected — is actually the ground truth
   for a thread.** For two coaxial same-pitch threads, helical symmetry makes
   the 3D mesh *exactly* reducible to the 2D axial cross-section (the standard

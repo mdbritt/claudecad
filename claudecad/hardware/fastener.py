@@ -1,12 +1,17 @@
-"""Threaded fastener: M8×1.25 hex bolt + hex nut, modeled as helical sweeps.
+"""Threaded fastener: M8×1.25 hex bolt + hex nut, lofted helical threads.
 
-Local frame: thread axis is +Z (`AXIS`). The thread is built by stacking
-exact-pitch-spaced copies of a single swept turn so the solid is truly
-pitch-periodic (a continuous multi-turn sweep drifts turn-to-turn and reads
-as interference under an ideal screw motion — see the design spec). The nut is
-the BASIC-profile negative; the bolt is the same profile offset undersize along
-the flank normal — so the run-down gate proves an undersize bolt clears a basic
-nut rather than that a solid fits its own negative.
+Local frame: thread axis is +Z (`AXIS`). The thread ridge is LOFTED through
+explicitly-oriented cross-sections placed along the helix (x = axial, y =
+radial, section normal = horizontal travel direction), one turn at a time,
+with turns stacked at exact integer-pitch spacing so the solid is truly
+pitch-periodic. Never `sweep()` a profile along a multi-turn helix: OCCT's
+sweep frame drifts and progressively tilts the profile, which both breaks
+pitch-periodicity and renders as stacked discs instead of one continuous
+spiral (technique adapted from gumyr's bd_warehouse Thread, which lofts
+oriented sections for the same reason). The nut is the BASIC-profile
+negative; the bolt is the same profile inset undersize at the shifted radii
+— so the mesh gate proves an undersize bolt clears a basic nut rather than
+that a solid fits its own negative.
 """
 from __future__ import annotations
 
@@ -14,7 +19,8 @@ import math
 from dataclasses import dataclass
 
 import numpy as np
-from build123d import Cylinder, Helix, Location, Plane, Polygon, Pos, RegularPolygon, Solid, extrude, sweep
+from build123d import (Cylinder, Helix, Plane, Polyline, Pos, RegularPolygon,
+                       Solid, Vector, extrude, loft, make_face)
 
 AXIS: tuple[float, float, float] = (0.0, 0.0, 1.0)
 FLANK_DEG: float = 60.0  # ISO metric included flank angle
@@ -75,12 +81,11 @@ class FastenerParams:
         return self.major_d / 2 - 5 * self.H / 8
 
 
-_SEGMENTS_PER_TURN = 8  # sub-turn segments of the swept EXPORT thread. Only
-                        # affects the 3D solids shipped to STEP/GLB (smoother
-                        # helix at higher K); the mesh gate is analytic
-                        # (thread_mesh_gap) and never touches the swept solid,
-                        # so raising K costs nothing at verification time —
-                        # a ~2s one-time export build for a clean-looking thread.
+_SECTIONS_PER_TURN = 13  # loft sections per turn of the EXPORT thread. Only
+                         # affects the 3D solids shipped to STEP/GLB; the mesh
+                         # gate is analytic (thread_mesh_gap) and never touches
+                         # the lofted solid, so this is purely a smoothness/
+                         # build-time knob (~1s at 13).
 _CORE_OVERLAP = 0.02  # core sits this far above the ridge root -> manifold fuse
                       # (a tangent core makes non-manifold seams; verified).
                       # This is the one place the swept 3D solid and the
@@ -95,35 +100,36 @@ def _half_width(p: FastenerParams, r: float) -> float:
     return p.pitch / 4 - (r - p.pitch_radius) * math.tan(math.radians(FLANK_DEG / 2))
 
 
-def _profile(p: FastenerParams, allowance: float) -> list[tuple[float, float]]:
-    """Undersize trapezoid: crest & root radii reduced by `allowance`, flank
-    half-widths taken at the SHIFTED radii and inset by `allowance`. Evaluating
-    the half-widths at the shifted (not basic) radii is what keeps the flanks
-    60 deg through the pitch line, so the bolt stays pitch-aligned with the
-    basic nut (a plain 2D offset raises the root above the nut crest; a naive
-    radial shift misaligns the pitch diameter)."""
+def _one_turn(p: FastenerParams, allowance: float) -> Solid:
+    """One turn of thread ridge, lofted through explicitly-oriented sections.
+
+    Each section is the undersize trapezoid — crest & root radii reduced by
+    `allowance`, flank half-widths taken at the SHIFTED radii and inset by
+    `allowance` (evaluating the half-widths at the shifted, not basic, radii
+    keeps the flanks 60 deg through the pitch line so the bolt stays
+    pitch-aligned with the basic nut; a naive radial shift misaligns the
+    pitch diameter). Sections are placed with x = axial (+Z), y = radial,
+    normal = the helix tangent's horizontal component, so every section sits
+    exactly in the axial-radial plane — the same cross-section the analytic
+    gate (`thread_mesh_gap._surf`) models. Lofting these oriented sections is
+    what a `sweep()` cannot do: the sweep frame drifts around the helix and
+    tilts the profile (renders as stacked discs, breaks pitch-periodicity)."""
     crest_r = p.major_d / 2 - allowance
     root_r = p.minor_radius - allowance
-    return [
-        (root_r - p.pitch_radius, -(_half_width(p, root_r) - allowance)),
-        (crest_r - p.pitch_radius, -(_half_width(p, crest_r) - allowance)),
-        (crest_r - p.pitch_radius, _half_width(p, crest_r) - allowance),
-        (root_r - p.pitch_radius, _half_width(p, root_r) - allowance),
-    ]
-
-
-def _one_turn(p: FastenerParams, allowance: float) -> Solid:
-    """One turn of thread ridge, K sub-segments placed by exact fractional
-    screws (K=1 is a single 1-turn sweep)."""
-    k = _SEGMENTS_PER_TURN
-    h = Helix(pitch=p.pitch, height=p.pitch / k, radius=p.pitch_radius)
-    plane = Plane(origin=h @ 0, x_dir=(1, 0, 0), z_dir=h % 0)
-    seg = sweep(plane * Polygon(*_profile(p, allowance), align=None), path=h)
-    ridge = seg
-    for i in range(1, k):
-        ridge = ridge + Pos(0, 0, i * p.pitch / k) * \
-            Location((0, 0, 0), AXIS, i * 360.0 / k) * seg
-    return ridge
+    hw_root = _half_width(p, root_r) - allowance
+    hw_crest = _half_width(p, crest_r) - allowance
+    height = crest_r - root_r
+    helix = Helix(pitch=p.pitch, height=p.pitch, radius=root_r)
+    sections = []
+    for i in range(_SECTIONS_PER_TURN):
+        u = i / (_SECTIONS_PER_TURN - 1)
+        tangent = helix % u
+        travel = Vector(tangent.X, tangent.Y, 0).normalized()
+        section_plane = Plane(helix @ u, x_dir=(0, 0, 1), z_dir=travel)
+        sections.append(section_plane * make_face(Polyline(
+            (hw_root, 0), (hw_crest, height),
+            (-hw_crest, height), (-hw_root, 0), close=True)))
+    return loft(sections)
 
 
 def _thread(p: FastenerParams, turns: int, allowance: float) -> Solid:
