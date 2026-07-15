@@ -227,7 +227,6 @@ def screw_clearance(moving, fixed, axis, center, lead: float, turns: float,
     if a.length == 0:
         raise ValueError(f"axis must be nonzero, got {tuple(a)}")
     a = a.normalized()
-    c = tuple(Vector(*center))
     ad = tuple(a)
     cx, cy, cz = (float(v) for v in center)
     out = []

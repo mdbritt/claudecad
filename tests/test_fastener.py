@@ -50,3 +50,16 @@ def test_thread_mesh_differential():
     assert math.isclose(thread_mesh_gap(p), p.allowance, abs_tol=1e-6)  # gap == clearance
     assert thread_mesh_gap(p, bolt_dz=AXIAL_SHIFT) < 0         # axial-only: jam
     assert thread_mesh_gap(p, nut_pitch_factor=WRONG_PITCH_FACTOR) < 0  # wrong pitch: jam
+
+
+def test_seated_assembly_meshes():
+    """The shipped export assembly (bolt + seated_nut) must actually clear:
+    an origin-pose bolt+nut jams (head overlaps nut, iv=32.8 mm^3) even
+    though the analytic mesh gate passes, because nothing checked the
+    shipped 3D geometry. seated_nut seats the nut up the shank by whole
+    pitches (phase-preserving) so it meshes instead of jamming."""
+    from claudecad.hardware.fastener import SEATED_MAX_IV, bolt, seated_nut
+    from claudecad.verify import intersection_volume
+    p = FastenerParams()
+    iv = intersection_volume(bolt(p), seated_nut(p))
+    assert iv < SEATED_MAX_IV, f"seated assembly interferes by {iv:.3f} mm^3"
