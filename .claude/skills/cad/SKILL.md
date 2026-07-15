@@ -65,6 +65,16 @@ layer that touches disk/Blender.
   raceway-displacing defects (eccentric groove, inward dent) fail it; every
   design carries a negative control that pins this. Clearance mechanisms read
   crisp 0 — any nonzero is a defect, never noise.
+- **Hinged / limited-travel joint** (`hardware/snapbox`): gated by partial-arc
+  sweeps about the hinge axis — `screw_clearance` with `lead=0` and `center`
+  ON the hinge axis (off-origin centers are supported and must be used;
+  never re-origin the model to dodge them). Travel limits are proven by a
+  SAME-PARAMETER differential: free within travel, blocked past the stop,
+  along one angular sweep. Snap retention is the two-state differential at
+  the closed pose (relaxed blocked / deflected free — blocking MOTION, not
+  touching). Every hinged design carries a displaced-center negative
+  control: sweeping about a center off the true axis must fail, proving the
+  gate detects a mis-built hinge.
 - **Attachment** is proven by linking number against a closed loop through
   the mounting circuit — the loop must genuinely cross the other part's
   plane (a coplanar loop can never link).

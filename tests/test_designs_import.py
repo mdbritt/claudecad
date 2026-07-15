@@ -12,7 +12,8 @@ DESIGNS = ["designs.bolt.build", "designs.bolt.params",
            "designs.cuban_bracelet.probe", "designs.simple_curb.build",
            "designs.simple_curb.params", "designs._template.build",
            "designs._template.params", "designs.bearing_608.build",
-           "designs.bearing_608.params"]
+           "designs.bearing_608.params", "designs.snapbox.build",
+           "designs.snapbox.params"]
 
 
 @pytest.mark.parametrize("module", DESIGNS)
