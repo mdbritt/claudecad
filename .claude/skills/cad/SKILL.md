@@ -57,6 +57,14 @@ layer that touches disk/Blender.
   the helix, one turn stacked per pitch — never `sweep()` a profile along a
   helix: the sweep frame drifts, tilting the profile (breaks periodicity,
   renders as stacked discs, not a continuous spiral).
+- **Multi-body / rolling set** (`hardware/bearing`): a mechanism whose moving
+  element is a SET of bodies is gated by moving the set as ONE compound
+  (`screw_clearance` accepts it directly). Discrete N-fold symmetry means one
+  360/N period proves the full revolution. On axisymmetric obstacles the
+  sweep's value is PROVING the axisymmetry — material-adding or
+  raceway-displacing defects (eccentric groove, inward dent) fail it; every
+  design carries a negative control that pins this. Clearance mechanisms read
+  crisp 0 — any nonzero is a defect, never noise.
 - **Attachment** is proven by linking number against a closed loop through
   the mounting circuit — the loop must genuinely cross the other part's
   plane (a coplanar loop can never link).
