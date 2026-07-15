@@ -15,7 +15,7 @@
 - **Never weaken a gate.** The spike-verified expectations below are the ground truth; if a transcription produces different numbers, fix the geometry, not the assertion.
 - Every part `check_solid(...).ok`; shipped pose (closed, relaxed, pin seated) gated pairwise-0 with the near-contact band.
 - House conventions per `hardware/carabiner.py`/`hardware/bearing.py`: frozen validated params, module gate fixtures shared by design build + tests; positional layout constants tuned at defaults (carabiner `_ring_geometry` precedent) documented as such.
-- **Spike-verified constants (2026-07-15, 4 rounds):** hinge axis `(1,0,0)` through `(0, −15, 15.15)`; swing 0→90° all-0 (10 stations); overtravel from the open pose free ≤100°, blocked ≥105° (0.91 @105° → 5.5 @115°); retention: relaxed blocked 1–5° (max ≈7.0, station 0 == 0), deflected free through 8°; pin escapes blocked +Z ≈70 / +Y ≈70 / ±X ≈4.7 (blind outer bores, single through-bore length 33, pin length 32); displaced-center (+0.5 y) sweep max ≈28.8; part volumes base ≈5552 / lid ≈3655 / pin ≈100.5.
+- **Spike-verified constants (2026-07-15, 4 rounds):** hinge axis `(1,0,0)` through `(0, −15, 15.15)`; swing 0→90° all-0 (10 stations); overtravel from the open pose free ≤100°, blocked ≥105° (0.91 @105° → 5.5 @115°); retention: relaxed blocked 1–5° (max ≈7.0, station 0 == 0), deflected free through 8°; pin escapes blocked +Z ≈79.7 / +Y ≈79.6 / ±X ≈4.7 (blind outer bores, single through-bore length 33, pin length 32; sweep distance = knuckle_d so stations sample the blocking band densely — post-ship fix 42b279e); displaced-center (+0.5 y) sweep max ≈21.2 (as-shipped fin width); part volumes base ≈5552 / lid ≈3655 / pin ≈100.5.
 - `tests/test_designs_import.py` is a **hardcoded list** — register new designs there.
 
 ---
@@ -596,7 +596,7 @@ if __name__ == "__main__":
 - [ ] **Step 2: Run the design gate**
 
 Run: `cd /Users/mike/code/claudeCAD && uv run python -m designs.snapbox.build`
-Expected: 4 clean parts, shipped worst iv 0.000000 / pin gap 0.1500, swing max 0.000000, travel limit free=True blocked=True (max ≈5.5), retention relaxed max ≈7.0 vs deflected 0.000000, pin capture ≈70/70/4.7/4.7, negative control ≈28.8, `exported out/step/snapbox.step`, exit 0.
+Expected: 4 clean parts, shipped worst iv 0.000000 / pin gap 0.1500, swing max 0.000000, travel limit free=True blocked=True (max ≈5.4), retention relaxed max ≈7.0 vs deflected 0.000000, pin capture ≈79.7/79.6/4.7/4.7, negative control ≈21.2, `exported out/step/snapbox.step`, exit 0.
 
 - [ ] **Step 3: Register in the designs-import smoke test**
 
