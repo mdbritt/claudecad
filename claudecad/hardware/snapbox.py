@@ -192,6 +192,11 @@ NEG_CENTER_OFFSET = 0.5    # mm hinge-axis displacement for the neg control
 
 
 def pin_escape_distance(p: SnapBoxParams) -> float:
-    """Translation that carries the pin clearly past the box envelope in
-    any of the four blocked directions."""
-    return max(p.outer_l, p.outer_w) / 2 + 5.0
+    """Sweep distance for the pin's BLOCKED escape checks. A blocked
+    assertion must sample the blocking band densely — for the pin that band
+    is the bore-wall-to-knuckle-exit region, knuckle_d wide (verified: with
+    an envelope-scale distance the 7 stations straddle the band and the
+    check passes on a 0.02 mm^3 sliver; at knuckle_d the same stations read
+    ~16-80 mm^3 deep). Envelope-scale distances are only needed for FREE
+    legs, and every pin direction here is blocked."""
+    return p.knuckle_d
