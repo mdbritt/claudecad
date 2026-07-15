@@ -13,7 +13,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
-from build123d import Cylinder, Helix, Location, Plane, Polygon, Pos, Solid, sweep
+from build123d import Cylinder, Helix, Location, Plane, Polygon, Pos, RegularPolygon, Solid, extrude, sweep
 
 AXIS: tuple[float, float, float] = (0.0, 0.0, 1.0)
 FLANK_DEG: float = 60.0  # ISO metric included flank angle
@@ -130,3 +130,24 @@ def external_thread(p: FastenerParams) -> Solid:
 def internal_thread(p: FastenerParams) -> Solid:
     """Nut tap cutter (basic thread), subtracted from the nut blank."""
     return _thread(p, p.nut_turns, 0.0)
+
+
+def _hex_prism(p: FastenerParams, height: float) -> Solid:
+    """Hex prism across `hex_across_flats`, base at z=0, extruded +Z."""
+    return extrude(
+        RegularPolygon(p.hex_across_flats / 2, 6, major_radius=False), height
+    )
+
+
+def bolt(p: FastenerParams) -> Solid:
+    """Hex head (below z=0) ∪ threaded shank (z=0..bolt_turns*pitch). The head
+    overlaps the shank base by 0.3 mm so the union fuses to a single solid
+    rather than joining on a coincident face (verified: solids==1)."""
+    shank = external_thread(p)
+    head = Pos(0, 0, -p.head_height) * _hex_prism(p, p.head_height + 0.3)
+    return shank + head
+
+
+def nut(p: FastenerParams) -> Solid:
+    """Hex prism (nut_turns*pitch tall) with a threaded bore."""
+    return _hex_prism(p, p.nut_turns * p.pitch) - internal_thread(p)

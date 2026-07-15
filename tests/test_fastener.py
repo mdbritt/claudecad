@@ -31,3 +31,12 @@ def test_threads_are_clean_manifold_solids():
     for name, s in (("external", external_thread(p)), ("internal", internal_thread(p))):
         r = check_solid(s)
         assert r.ok, f"{name} not clean: valid={r.is_valid} manifold={r.is_manifold} pieces={r.piece_count}"
+
+
+def test_parts_clean():
+    from claudecad.verify import check_solid
+    from claudecad.hardware.fastener import bolt, nut
+    p = FastenerParams()
+    for name, s in (("bolt", bolt(p)), ("nut", nut(p))):
+        r = check_solid(s)
+        assert r.ok, f"{name} not a clean solid: {r}"
