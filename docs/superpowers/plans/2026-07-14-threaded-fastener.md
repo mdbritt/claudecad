@@ -20,6 +20,207 @@
 
 ---
 
+## AMENDMENT 2026-07-15 — analytic mesh gate (supersedes Tasks 3, 5, 6 below)
+
+Implementation proved the boolean 3-leg gate is the wrong tool for a thread (facet noise at meshing contact; see the spec amendment). **Tasks 1, 2, 4 stand as written and are done/valid.** Tasks 3, 5, 6 are REPLACED by the versions here; the boolean versions below (screw_clearance-based gate, `seated_nut`, `path_clearance` legs, the pitch-periodic boolean test) are **superseded — do not implement them.** `screw_clearance` (Task 1) stays committed as a general primitive Phase 2 reuses; it is no longer the bolt's mesh gate.
+
+### Task 3′ — manifold swept threads (for export), gated valid+manifold
+
+The swept 3D thread is built only so the STEP/GLB export has a real solid; the MESH is verified analytically (Task 5′). Construction (verified manifold): reduce crest & root radii by `allowance` but take the flank half-widths at the **shifted** radii (keeps flanks 60° through the pitch line — no pitch-diameter misalignment), and give the core a small overlap so the union fuses manifold instead of tangent.
+
+Add to `claudecad/hardware/fastener.py` (build123d import line: `Cylinder, Helix, Location, Plane, Polygon, Pos, Solid, sweep`):
+
+```python
+_SEGMENTS_PER_TURN = 1
+_CORE_OVERLAP = 0.02  # core sits this far above the ridge root -> manifold fuse
+                      # (a tangent core makes non-manifold seams; verified)
+
+
+def _half_width(p: FastenerParams, r: float) -> float:
+    """Axial half-width of the 60-deg thread at radius r."""
+    return p.pitch / 4 - (r - p.pitch_radius) * math.tan(math.radians(FLANK_DEG / 2))
+
+
+def _profile(p: FastenerParams, allowance: float) -> list[tuple[float, float]]:
+    """Undersize trapezoid: crest & root radii reduced by `allowance`, flank
+    half-widths taken at the SHIFTED radii and inset by `allowance`. Evaluating
+    the half-widths at the shifted (not basic) radii is what keeps the flanks
+    60 deg through the pitch line, so the bolt stays pitch-aligned with the
+    basic nut (a plain 2D offset raises the root above the nut crest; a naive
+    radial shift misaligns the pitch diameter)."""
+    crest_r = p.major_d / 2 - allowance
+    root_r = p.minor_radius - allowance
+    return [
+        (root_r - p.pitch_radius, -(_half_width(p, root_r) - allowance)),
+        (crest_r - p.pitch_radius, -(_half_width(p, crest_r) - allowance)),
+        (crest_r - p.pitch_radius, _half_width(p, crest_r) - allowance),
+        (root_r - p.pitch_radius, _half_width(p, root_r) - allowance),
+    ]
+
+
+def _one_turn(p: FastenerParams, allowance: float) -> Solid:
+    """One turn of thread ridge, K sub-segments placed by exact fractional
+    screws (K=1 is a single 1-turn sweep)."""
+    k = _SEGMENTS_PER_TURN
+    h = Helix(pitch=p.pitch, height=p.pitch / k, radius=p.pitch_radius)
+    plane = Plane(origin=h @ 0, x_dir=(1, 0, 0), z_dir=h % 0)
+    seg = sweep(plane * Polygon(*_profile(p, allowance), align=None), path=h)
+    ridge = seg
+    for i in range(1, k):
+        ridge = ridge + Pos(0, 0, i * p.pitch / k) * \
+            Location((0, 0, 0), AXIS, i * 360.0 / k) * seg
+    return ridge
+
+
+def _thread(p: FastenerParams, turns: int, allowance: float) -> Solid:
+    """Pitch-periodic thread: one turn stacked at exact integer-pitch spacing
+    (a continuous multi-turn sweep drifts), unioned with a core cylinder that
+    overlaps the ridge root by _CORE_OVERLAP for a manifold fuse."""
+    one = _one_turn(p, allowance)
+    ridge = one
+    for t in range(1, turns):
+        ridge = ridge + Pos(0, 0, t * p.pitch) * one
+    core_r = (p.minor_radius - allowance) + _CORE_OVERLAP
+    core = Pos(0, 0, turns * p.pitch / 2) * Cylinder(core_r, turns * p.pitch)
+    return core + ridge
+
+
+def external_thread(p: FastenerParams) -> Solid:
+    """Bolt threaded shank (undersize by `allowance`)."""
+    return _thread(p, p.bolt_turns, p.allowance)
+
+
+def internal_thread(p: FastenerParams) -> Solid:
+    """Nut tap cutter (basic thread), subtracted from the nut blank."""
+    return _thread(p, p.nut_turns, 0.0)
+```
+
+Test (`tests/test_fastener.py`) — TDD RED (ImportError) then GREEN. Threads must be VALID + MANIFOLD (this is the bug the boolean version missed — `is_valid` alone passed a non-manifold solid):
+
+```python
+def test_threads_are_clean_manifold_solids():
+    from claudecad.verify import check_solid
+    from claudecad.hardware.fastener import external_thread, internal_thread
+    p = FastenerParams()
+    for name, s in (("external", external_thread(p)), ("internal", internal_thread(p))):
+        r = check_solid(s)
+        assert r.ok, f"{name} not clean: valid={r.is_valid} manifold={r.is_manifold} pieces={r.piece_count}"
+```
+
+### Task 5′ — analytic mesh gate (`thread_mesh_gap`)
+
+By helical symmetry each thread surface is a single-valued sawtooth `r(z)` in the axial section; the parts interfere iff `r_bolt(z) >= r_nut(z)` somewhere, so `min_z(r_nut - r_bolt)` is the EXACT signed clearance. Verified: mesh gap = `allowance` (a real air gap), axial-shift and wrong-pitch both cleanly negative, correct backlash. Add to `fastener.py` (`import numpy as np` at top):
+
+```python
+# analytic mesh-gate fixtures (shared by the design build and the test)
+AXIAL_SHIFT = 0.15        # mm of pure-axial shift (past the ~0.05 backlash) -> jam
+WRONG_PITCH_FACTOR = 1.05  # nut pitch error over the engagement -> jam
+_GAP_SAMPLES = 20000
+
+
+def _surf(z, phase: float, crest_r: float, root_r: float, crest_hw: float,
+          pitch: float):
+    """Single-valued thread surface r(z) in the axial section: crest flat ->
+    60-deg flank -> root flat, period `pitch`, crest centered at `phase`."""
+    u = np.abs((z - phase + pitch / 2) % pitch - pitch / 2)
+    fz = abs(crest_r - root_r) * math.tan(math.radians(FLANK_DEG / 2))
+    return np.where(u <= crest_hw, crest_r,
+           np.where(u <= crest_hw + fz,
+                    crest_r + (root_r - crest_r) * (u - crest_hw) / fz, root_r))
+
+
+def thread_mesh_gap(p: FastenerParams, bolt_dz: float = 0.0,
+                    nut_pitch_factor: float = 1.0) -> float:
+    """Exact min axial-section clearance (mm) between the meshed bolt and nut
+    threads over the nut's engagement. >0 is a real air gap (free); <=0 is
+    interference (jam). The nut inner surface is a basic external-thread
+    sawtooth; the bolt is the undersize sawtooth at the same phase (+bolt_dz).
+    Coaxial same-pitch helical symmetry makes this 2D section exact."""
+    z = np.linspace(0.0, p.nut_turns * p.pitch, _GAP_SAMPLES)
+    hw = lambda r: _half_width(p, r)
+    a = p.allowance
+    rn = _surf(z, 0.0, p.major_d / 2, p.minor_radius, hw(p.major_d / 2),
+               p.pitch * nut_pitch_factor)
+    rb = _surf(z, bolt_dz, p.major_d / 2 - a, p.minor_radius - a,
+               hw(p.major_d / 2 - a) - a, p.pitch)
+    return float(np.min(rn - rb))
+```
+
+Test — the crisp differential (TDD RED then GREEN):
+
+```python
+def test_thread_mesh_differential():
+    from claudecad.hardware.fastener import (
+        AXIAL_SHIFT, WRONG_PITCH_FACTOR, thread_mesh_gap)
+    p = FastenerParams()
+    assert thread_mesh_gap(p) > 0                              # mesh: real air gap
+    assert math.isclose(thread_mesh_gap(p), p.allowance, abs_tol=1e-6)  # gap == clearance
+    assert thread_mesh_gap(p, bolt_dz=AXIAL_SHIFT) < 0         # axial-only: jam
+    assert thread_mesh_gap(p, nut_pitch_factor=WRONG_PITCH_FACTOR) < 0  # wrong pitch: jam
+```
+
+Also add a `_surf`/gap unit test on a known trivial case if useful, but the differential above is the heart.
+
+### Task 6′ — design `designs/bolt` with the analytic gate
+
+`designs/bolt/params.py`: `P = FastenerParams()` (unchanged). `designs/bolt/__init__.py`: empty. `designs/bolt/build.py` mirrors `carabiner/build.py` but the gate is: parts clean+manifold, mesh air gap >0, axial jam <0, wrong-pitch jam <0.
+
+```python
+"""Build, verify, and export the M8 hex bolt + nut.
+
+Usage: uv run python -m designs.bolt.build
+GLB always; STEP only if the gate passes (exit 1 otherwise). The gate: parts
+are clean manifold solids, and the analytic thread mesh has a real air gap on
+the true pitch (free) but jams under a pure-axial shift and a wrong pitch.
+Mesh proof is the exact 2D axial section (helical symmetry), not booleans.
+"""
+import sys
+
+from claudecad.hardware.fastener import (
+    AXIAL_SHIFT, WRONG_PITCH_FACTOR, bolt, nut, thread_mesh_gap,
+)
+from claudecad.verify import check_solid
+from tools.export import export_design, export_glb
+
+from .params import P
+
+
+def main() -> int:
+    b, n = bolt(P), nut(P)
+    parts = {"bolt": b, "nut": n}
+    export_glb(parts, "out/glb/bolt.glb", linear_deflection=0.01,
+               angular_deflection=0.1)
+
+    ok = True
+    for name, s in parts.items():
+        r = check_solid(s)
+        print(f"{name}: valid={r.is_valid} manifold={r.is_manifold} "
+              f"pieces={r.piece_count} volume={r.volume:.1f}")
+        ok = ok and r.ok
+
+    mesh = thread_mesh_gap(P)
+    axial = thread_mesh_gap(P, bolt_dz=AXIAL_SHIFT)
+    wrong = thread_mesh_gap(P, nut_pitch_factor=WRONG_PITCH_FACTOR)
+    print(f"mesh air gap {mesh:+.4f} (free, >0) | axial-shift {axial:+.4f} "
+          f"(jam, <0) | wrong-pitch {wrong:+.4f} (jam, <0)")
+    ok = ok and mesh > 0 and axial < 0 and wrong < 0
+
+    if not ok:
+        print("verification FAILED — STEP not exported", file=sys.stderr)
+        return 1
+    export_design(parts, "out/step/bolt.step", assembly_label="bolt")
+    print("exported out/step/bolt.step")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+```
+
+`bolt(p)`/`nut(p)` are Task 4 (unchanged — they call `external_thread`/`internal_thread`). Add the screw-motion **and** analytic-mesh law to `.claude/skills/cad/SKILL.md`: *a threaded joint is proven by the exact 2D axial-section clearance (helical symmetry) — a real air gap on the true pitch, jamming under pure-axial shift and wrong pitch; the swept 3D solid is gated valid+manifold for export.* Then render (`tools/render.py out/glb/bolt.glb --outdir out/renders/bolt`) and judge vs an M8 reference.
+
+---
+
 ### Task 1: `screw_clearance` verification primitive
 
 **Files:**
