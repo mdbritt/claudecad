@@ -36,7 +36,7 @@ nonzero interference is a real modeling defect, not facet noise. Four proofs:
 
 1. **Rest clearance:** every ball has zero boolean interference with both
    races AND a positive exact gap (`verify.clearance`) no larger than the
-   stated `radial_play` band — near-contact, never touching (the cuban chain's
+   `REST_MAX_GAP` band — near-contact, never touching (the cuban chain's
    `max_gap` concept, applied radially).
 2. **Orbital free-spin (the multi-body gate):** the 7-ball ring, moved as ONE
    compound, is swept about the axis with `screw_clearance(balls, races, AXIS,
@@ -46,10 +46,13 @@ nonzero interference is a real modeling defect, not facet noise. Four proofs:
    - *Why this is not a tautology:* on correctly built races (exact solids of
      revolution) every station is symmetry-equivalent to station 0 — and the
      gate exists to PROVE that, not assume it. Any axisymmetry-breaking
-     construction defect — a filling notch, a flat, an off-axis bore, a
-     mis-clocked groove — fails the sweep. It is the rotational sibling of the
-     bolt's wrong-lead leg: a check that the geometry actually has the
-     symmetry the mechanism depends on.
+     construction defect that ADDS material to the ball path or displaces the
+     raceway — an eccentric (off-axis) groove, an inward protrusion or dent,
+     a mis-centered race — fails the sweep. (Material-REMOVING defects like a
+     filling notch cannot create interference and are caught by the capture
+     differentials instead, if they breach the shoulders.) It is the
+     rotational sibling of the bolt's wrong-lead leg: a check that the
+     geometry actually has the symmetry the mechanism depends on.
 3. **Capture differential (per ball, by symmetry checked on one):** with both
    races present, a ball pushed radially outward, radially inward, and axially
    both ways (`path_clearance`, distance ≥ its escape distance) is BLOCKED
@@ -75,8 +78,9 @@ I1 lesson).
   Groove radius = `osculation × ball_d` with osculation default **0.52**
   (52 % — the standard deep-groove conformity band is ~51.5–53 %); groove
   centers on the pitch circle.
-- **Balls:** `Sphere(ball_d/2 − radial_play/2)` placed at pitch radius,
-  rotation-copied 7× about Z (the placement law).
+- **Balls:** `Sphere(ball_d/2)` placed at pitch radius, rotation-copied 7×
+  about Z (the placement law); the rest gap comes from the osculation (see
+  the amended nominal-numbers section).
 - **The moving set:** the 7 balls unioned/compounded as ONE shape passed as
   `moving` to `screw_clearance` — this is deliberately the FIRST multi-body
   `moving` in the repo and the tooling point of the phase. `screw_clearance`
@@ -97,21 +101,24 @@ I1 lesson).
 608: bore 8.0, OD 22.0, width 7.0, pitch circle Ø 15.0. Balls 7 × Ø 3.969
 (5/32″ standard complement). Pitch circumference 47.12 mm vs 27.78 mm of ball
 diameters → center spacing 6.73 mm, ball-to-ball surface gap ≈ 2.76 mm
-(comfortable). `radial_play` default 0.05 mm — a design value chosen for
-robust booleans, NOT a manufacturing clearance (real C0 play is ~0.005–0.018;
-out of scope like the clasp's `clearance`). Shoulder heights and groove depth
+(comfortable). *(Amended after the milestone-1 spike: the planned separate
+`radial_play` parameter is dropped — the osculation itself supplies the rest
+gap, `rest_gap = groove_r − ball_d/2` = 0.0794 mm at defaults, and a second
+play parameter would double-count. The gap band is gated by `REST_MAX_GAP`.
+Still a design value, not a manufacturing clearance — real C0 play is
+~0.005–0.018 and out of scope like the clasp's `clearance`.)* Shoulder heights and groove depth
 are derived params with validation inequalities (shoulders must overlap the
 ball's equator enough to capture radially and axially: the radial gap between
-inner-shoulder OD and outer-shoulder ID must be < ball_d − 2·radial_play);
+inner-shoulder OD and outer-shoulder ID must be < ball_d);
 exact defaults are tuned in the milestone-1 spike and pinned by tests.
 
 ## Components
 
 ### `claudecad/hardware/bearing.py` (new, pure geometry — mirrors carabiner/fastener conventions)
 - `BearingParams` (frozen dataclass, mm, value-carrying ValueErrors): `bore`,
-  `outer_d`, `width`, `n_balls`, `ball_d`, `osculation`, `radial_play`,
-  computed props (pitch radius, groove radius, shoulder radii) and the capture
-  inequality in `__post_init__`.
+  `outer_d`, `width`, `n_balls`, `ball_d`, `osculation`, `shoulder_frac`,
+  computed props (pitch radius, groove radius, shoulder radii, rest gap) and
+  the capture inequality in `__post_init__`.
 - `inner_race(p) -> Solid`, `outer_race(p) -> Solid` — revolved sections.
 - `ball(p, i) -> Solid` — the i-th ball (rotation-copy placement law).
 - `ball_ring(p) -> Shape` — all balls as the single multi-body moving set.
