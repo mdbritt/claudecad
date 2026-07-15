@@ -127,3 +127,25 @@ def ball_ring(p: BearingParams) -> Shape:
     """All n_balls as ONE multi-body moving set (a Compound — verified to
     work directly as `moving` in screw_clearance) for the orbital gate."""
     return Compound(children=[ball(p, i) for i in range(p.n_balls)])
+
+
+# --- gate fixtures (one source for the design build and the tests) ---
+ORBIT_STATIONS = 15   # stations across one 360/n_balls symmetry period
+REST_MAX_GAP = 0.1    # mm — near-contact band ceiling on the rest gap
+                      # (rest_gap 0.0794 at defaults sits inside it)
+
+
+def escape_distance(p: BearingParams) -> float:
+    """Radial translation that carries a ball clearly past the outer race's
+    envelope (used by the capture differential)."""
+    return p.outer_d / 2 + p.ball_d / 2 - p.pitch_radius + 1.0
+
+
+def outer_race_eccentric(p: BearingParams, offset: float) -> Solid:
+    """DEFECTIVE outer race for the negative control: the groove torus is
+    displaced `offset` mm off-axis, breaking raceway axisymmetry. The orbital
+    gate must fail on it — that failure is what proves the sweep checks
+    axisymmetry rather than assuming it."""
+    return (Cylinder(p.outer_d / 2, p.width)
+            - Cylinder(p.outer_shoulder_radius, p.width + 1)
+            - Pos(offset, 0, 0) * _groove_torus(p))

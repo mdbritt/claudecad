@@ -55,3 +55,59 @@ def test_ball_placement_law():
     # spike-verified surface gap between neighbors: 2.5393
     assert math.isclose(clearance(balls[0], balls[1]), chord - p.ball_d,
                         abs_tol=1e-6)
+
+
+def test_rest_clearance_band():
+    """Proof 1: crisp 0 interference AND a positive near-contact gap band."""
+    from claudecad.hardware.bearing import REST_MAX_GAP
+    p = BearingParams()
+    b0, ir, orc = ball(p, 0), inner_race(p), outer_race(p)
+    for race in (ir, orc):
+        assert intersection_volume(b0, race) == 0.0
+        g = clearance(b0, race)
+        assert 0 < g <= REST_MAX_GAP
+        # spike-verified: gap == rest_gap == 0.0794 at defaults
+        assert math.isclose(g, p.rest_gap, abs_tol=1e-3)
+
+
+def test_orbital_free_spin():
+    """Proof 2 (THE multi-body gate): the 7-ball ring, moved as one compound,
+    sweeps one 360/n symmetry period with zero interference at every station."""
+    from claudecad.hardware.bearing import AXIS, ORBIT_STATIONS
+    from claudecad.verify import screw_clearance
+    p = BearingParams()
+    races = inner_race(p) + outer_race(p)
+    vals = screw_clearance(ball_ring(p), races, AXIS, (0, 0, 0),
+                           0.0, 1.0 / p.n_balls, ORBIT_STATIONS)
+    assert max(vals) == 0.0
+
+
+def test_capture_differential():
+    """Proof 3: ball 0 (all balls congruent by the placement law) is blocked
+    radially out/in and axially with both races present; removing the outer
+    race frees the radial-out escape — the carabiner differential, per ball."""
+    from claudecad.hardware.bearing import escape_distance
+    from claudecad.verify import path_clearance
+    p = BearingParams()
+    b0, ir, orc = ball(p, 0), inner_race(p), outer_race(p)
+    races = ir + orc
+    d = escape_distance(p)
+    assert max(path_clearance(b0, races, (1, 0, 0), d, 9)) > 0.0    # out: blocked
+    assert max(path_clearance(b0, races, (-1, 0, 0), p.pitch_radius, 9)) > 0.0  # in
+    assert max(path_clearance(b0, races, (0, 0, 1), p.width, 9)) > 0.0          # axial
+    assert max(path_clearance(b0, ir, (1, 0, 0), d, 9)) == 0.0      # sans outer: FREE
+
+
+def test_eccentric_groove_fails_orbit():
+    """Negative control (pins the non-tautology claim): an outer race whose
+    groove is displaced 0.15 mm off-axis must FAIL the orbital sweep — the
+    gate detects broken axisymmetry (spike-verified: iv >= 0.146 at every
+    station of the period)."""
+    from claudecad.hardware.bearing import (AXIS, ORBIT_STATIONS,
+                                            outer_race_eccentric)
+    from claudecad.verify import screw_clearance
+    p = BearingParams()
+    races_bad = inner_race(p) + outer_race_eccentric(p, 0.15)
+    vals = screw_clearance(ball_ring(p), races_bad, AXIS, (0, 0, 0),
+                           0.0, 1.0 / p.n_balls, ORBIT_STATIONS)
+    assert max(vals) > 0.0
