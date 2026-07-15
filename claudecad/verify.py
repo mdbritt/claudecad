@@ -9,6 +9,11 @@ from dataclasses import dataclass
 
 import numpy as np
 from build123d import Location, Pos, Vector
+from OCP.BRep import BRep_Tool
+from OCP.TopAbs import TopAbs_EDGE, TopAbs_FACE
+from OCP.TopExp import TopExp
+from OCP.TopoDS import TopoDS
+from OCP.TopTools import TopTools_IndexedDataMapOfShapeListOfShape
 
 
 @dataclass(frozen=True)
@@ -28,9 +33,28 @@ class SolidReport:
         )
 
 
+def _edges_watertight(shape) -> bool:
+    """Manifold/watertight test: every non-degenerate edge borders exactly
+    two faces. Replaces build123d 0.11.1's Shape.is_manifold, whose
+    degenerate-edge skip checks for null vertices — real degenerate edges
+    (e.g. sphere poles) carry vertices, so closed spheres read non-manifold.
+    Uses OCCT's canonical degeneracy test (BRep_Tool.Degenerated_s);
+    genuinely non-manifold shapes (an edge bordering != 2 faces) still fail."""
+    edge_map = TopTools_IndexedDataMapOfShapeListOfShape()
+    TopExp.MapShapesAndAncestors_s(shape.wrapped, TopAbs_EDGE, TopAbs_FACE,
+                                   edge_map)
+    for i in range(edge_map.Extent()):
+        if BRep_Tool.Degenerated_s(TopoDS.Edge_s(edge_map.FindKey(i + 1))):
+            continue
+        if edge_map.FindFromIndex(i + 1).Extent() != 2:
+            return False
+    return True
+
+
 def check_solid(shape) -> SolidReport:
     return SolidReport(
-        shape.is_valid, shape.is_manifold, shape.volume, len(shape.solids())
+        shape.is_valid, _edges_watertight(shape), shape.volume,
+        len(shape.solids())
     )
 
 

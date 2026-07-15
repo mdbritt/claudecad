@@ -238,3 +238,22 @@ def test_screw_clearance_offorigin_center_station0_rest_pose():
     # Station 0 must match the untransformed intersection volume
     assert abs(vals[0] - expected_rest) < 1e-9, \
         f"station 0 interference {vals[0]} != rest pose {expected_rest}"
+
+
+def test_check_solid_sphere_is_watertight():
+    # build123d 0.11.1 Shape.is_manifold false-negatives on spheres: pole
+    # edges are degenerate but carry vertices, so its null-vertex skip never
+    # fires and the single-face count fails. check_solid must use the
+    # canonical OCCT degeneracy test instead (BRep_Tool.Degenerated_s).
+    from build123d import Sphere
+    from claudecad.verify import check_solid
+    r = check_solid(Sphere(2.0))
+    assert r.is_manifold and r.ok
+
+
+def test_check_solid_still_rejects_nonmanifold():
+    # two boxes sharing exactly one edge: that edge borders 4 faces
+    from build123d import Box, Pos
+    from claudecad.verify import check_solid
+    bad = Box(1, 1, 1) + Pos(1, 1, 0) * Box(1, 1, 1)
+    assert not check_solid(bad).is_manifold
