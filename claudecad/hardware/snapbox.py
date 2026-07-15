@@ -178,3 +178,20 @@ def hinge_pin(p: SnapBoxParams) -> Solid:
     blind outer ends of the through-bore (bore len < knuckle span)."""
     hc = p.hinge_center
     return Pos(0, hc[1], hc[2]) * Rot(Y=90) * Cylinder(p.pin_d / 2, _PIN_LEN)
+
+
+# --- gate fixtures (one source for the design build and the tests) ---
+SWING_STATIONS = 10        # stations across the working swing
+OVERTRAVEL_SPAN_DEG = 25.0  # sweep past the open pose for the travel limit
+OVERTRAVEL_STATIONS = 11
+OPEN_FREE_MAX_DEG = 100.0  # verified free through here at defaults
+BLOCKED_BY_DEG = 105.0     # verified blocked from here at defaults
+RETENTION_SPAN_DEG = 8.0   # opening arc that must catch the relaxed nub
+RETENTION_STATIONS = 9     # (verified: blocked 1-5 deg, max ~7.0 mm^3)
+NEG_CENTER_OFFSET = 0.5    # mm hinge-axis displacement for the neg control
+
+
+def pin_escape_distance(p: SnapBoxParams) -> float:
+    """Translation that carries the pin clearly past the box envelope in
+    any of the four blocked directions."""
+    return max(p.outer_l, p.outer_w) / 2 + 5.0

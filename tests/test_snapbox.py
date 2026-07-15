@@ -56,3 +56,92 @@ def test_shipped_pose_clearances():
     assert math.isclose(clearance(pin, b), p.clearance, abs_tol=1e-6)
     assert math.isclose(clearance(pin, l), p.clearance, abs_tol=1e-6)
     assert math.isclose(clearance(l, b), p.clearance, abs_tol=1e-2)
+
+
+def test_swing_arc_free():
+    """Proof 1 (off-origin partial arc): the deflected lid sweeps the full
+    swing about the hinge axis — center far from the origin — clear of
+    base + pin at every station."""
+    from claudecad.hardware.snapbox import SWING_STATIONS
+    from claudecad.verify import screw_clearance
+    p = SnapBoxParams()
+    fixed = base(p) + hinge_pin(p)
+    vals = screw_clearance(lid(p, "deflected"), fixed, HINGE_AXIS,
+                           p.hinge_center, 0.0, p.swing_deg / 360.0,
+                           SWING_STATIONS)
+    assert max(vals) == 0.0
+
+
+def test_travel_limit_differential():
+    """Proof 2 (same-parameter differential): from the open pose, further
+    opening is free through OPEN_FREE_MAX_DEG and blocked by BLOCKED_BY_DEG
+    — the stop fin actually limits travel."""
+    from claudecad.hardware.snapbox import (
+        BLOCKED_BY_DEG, OPEN_FREE_MAX_DEG, OVERTRAVEL_SPAN_DEG,
+        OVERTRAVEL_STATIONS, _rot_about)
+    from claudecad.verify import screw_clearance
+    p = SnapBoxParams()
+    fixed = base(p) + hinge_pin(p)
+    lid_open = _rot_about(p.hinge_center, HINGE_AXIS, p.swing_deg,
+                          lid(p, "deflected"))
+    vals = screw_clearance(lid_open, fixed, HINGE_AXIS, p.hinge_center,
+                           0.0, OVERTRAVEL_SPAN_DEG / 360.0,
+                           OVERTRAVEL_STATIONS)
+    step = OVERTRAVEL_SPAN_DEG / (OVERTRAVEL_STATIONS - 1)
+    for i, v in enumerate(vals):
+        ang = p.swing_deg + i * step
+        if ang <= OPEN_FREE_MAX_DEG:
+            assert v == 0.0, f"blocked inside travel at {ang} deg: {v}"
+        if ang >= BLOCKED_BY_DEG:
+            assert v > 0.0, f"free past the stop at {ang} deg"
+
+
+def test_snap_retention_differential():
+    """Proof 3 (the click): over the first RETENTION_SPAN_DEG of opening,
+    the RELAXED latch is blocked at some station (nub arcs into the catch)
+    while the DEFLECTED latch runs free. Station 0 (at rest) is clear for
+    both — the latch holds by blocking MOTION, not by touching."""
+    from claudecad.hardware.snapbox import (RETENTION_SPAN_DEG,
+                                            RETENTION_STATIONS)
+    from claudecad.verify import screw_clearance
+    p = SnapBoxParams()
+    fixed = base(p) + hinge_pin(p)
+    rel = screw_clearance(lid(p, "relaxed"), fixed, HINGE_AXIS,
+                          p.hinge_center, 0.0, RETENTION_SPAN_DEG / 360.0,
+                          RETENTION_STATIONS)
+    dfl = screw_clearance(lid(p, "deflected"), fixed, HINGE_AXIS,
+                          p.hinge_center, 0.0, RETENTION_SPAN_DEG / 360.0,
+                          RETENTION_STATIONS)
+    assert rel[0] == 0.0            # at rest: air gap, not contact
+    assert max(rel) > 0.0           # opening arcs the nub into the catch
+    assert max(dfl) == 0.0          # deflected: sweeps open free
+
+
+def test_pin_capture():
+    """Proof 4: pin blocked radially both ways and axially both ways
+    (blind-ended bore); the escape distances clear the box envelope."""
+    from claudecad.hardware.snapbox import pin_escape_distance
+    from claudecad.verify import path_clearance
+    p = SnapBoxParams()
+    fixed = base(p) + lid(p, "relaxed")
+    pin = hinge_pin(p)
+    d = pin_escape_distance(p)
+    for axis in ((0, 0, 1), (0, 1, 0), (1, 0, 0), (-1, 0, 0)):
+        assert max(path_clearance(pin, fixed, axis, d, 7)) > 0.0, axis
+
+
+def test_displaced_center_fails_swing():
+    """Negative control (pins the off-origin claim): sweeping about a
+    center displaced NEG_CENTER_OFFSET off the true hinge axis must FAIL —
+    the gate detects a mis-built hinge. This control would have caught the
+    original screw_clearance center bug."""
+    from claudecad.hardware.snapbox import NEG_CENTER_OFFSET, SWING_STATIONS
+    from claudecad.verify import screw_clearance
+    p = SnapBoxParams()
+    fixed = base(p) + hinge_pin(p)
+    hc = p.hinge_center
+    bad_center = (hc[0], hc[1] + NEG_CENTER_OFFSET, hc[2])
+    vals = screw_clearance(lid(p, "deflected"), fixed, HINGE_AXIS,
+                           bad_center, 0.0, p.swing_deg / 360.0,
+                           SWING_STATIONS)
+    assert max(vals) > 0.0
