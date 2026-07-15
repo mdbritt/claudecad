@@ -40,3 +40,13 @@ def test_parts_clean():
     for name, s in (("bolt", bolt(p)), ("nut", nut(p))):
         r = check_solid(s)
         assert r.ok, f"{name} not a clean solid: {r}"
+
+
+def test_thread_mesh_differential():
+    from claudecad.hardware.fastener import (
+        AXIAL_SHIFT, WRONG_PITCH_FACTOR, thread_mesh_gap)
+    p = FastenerParams()
+    assert thread_mesh_gap(p) > 0                              # mesh: real air gap
+    assert math.isclose(thread_mesh_gap(p), p.allowance, abs_tol=1e-6)  # gap == clearance
+    assert thread_mesh_gap(p, bolt_dz=AXIAL_SHIFT) < 0         # axial-only: jam
+    assert thread_mesh_gap(p, nut_pitch_factor=WRONG_PITCH_FACTOR) < 0  # wrong pitch: jam

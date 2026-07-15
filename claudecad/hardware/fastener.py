@@ -13,6 +13,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
+import numpy as np
 from build123d import Cylinder, Helix, Location, Plane, Polygon, Pos, RegularPolygon, Solid, extrude, sweep
 
 AXIS: tuple[float, float, float] = (0.0, 0.0, 1.0)
@@ -151,3 +152,37 @@ def bolt(p: FastenerParams) -> Solid:
 def nut(p: FastenerParams) -> Solid:
     """Hex prism (nut_turns*pitch tall) with a threaded bore."""
     return _hex_prism(p, p.nut_turns * p.pitch) - internal_thread(p)
+
+
+# analytic mesh-gate fixtures (shared by the design build and the test)
+AXIAL_SHIFT = 0.15        # mm of pure-axial shift (past the ~0.05 backlash) -> jam
+WRONG_PITCH_FACTOR = 1.05  # nut pitch error over the engagement -> jam
+_GAP_SAMPLES = 20000
+
+
+def _surf(z, phase: float, crest_r: float, root_r: float, crest_hw: float,
+          pitch: float):
+    """Single-valued thread surface r(z) in the axial section: crest flat ->
+    60-deg flank -> root flat, period `pitch`, crest centered at `phase`."""
+    u = np.abs((z - phase + pitch / 2) % pitch - pitch / 2)
+    fz = abs(crest_r - root_r) * math.tan(math.radians(FLANK_DEG / 2))
+    return np.where(u <= crest_hw, crest_r,
+           np.where(u <= crest_hw + fz,
+                    crest_r + (root_r - crest_r) * (u - crest_hw) / fz, root_r))
+
+
+def thread_mesh_gap(p: FastenerParams, bolt_dz: float = 0.0,
+                    nut_pitch_factor: float = 1.0) -> float:
+    """Exact min axial-section clearance (mm) between the meshed bolt and nut
+    threads over the nut's engagement. >0 is a real air gap (free); <=0 is
+    interference (jam). The nut inner surface is a basic external-thread
+    sawtooth; the bolt is the undersize sawtooth at the same phase (+bolt_dz).
+    Coaxial same-pitch helical symmetry makes this 2D section exact."""
+    z = np.linspace(0.0, p.nut_turns * p.pitch, _GAP_SAMPLES)
+    hw = lambda r: _half_width(p, r)
+    a = p.allowance
+    rn = _surf(z, 0.0, p.major_d / 2, p.minor_radius, hw(p.major_d / 2),
+               p.pitch * nut_pitch_factor)
+    rb = _surf(z, bolt_dz, p.major_d / 2 - a, p.minor_radius - a,
+               hw(p.major_d / 2 - a) - a, p.pitch)
+    return float(np.min(rn - rb))
