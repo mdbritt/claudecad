@@ -18,7 +18,7 @@ from claudecad.verify import (
     check_solid, clearance, intersection_volume, path_clearance,
     screw_clearance,
 )
-from tools.export import export_design, export_glb
+from claudecad.export import export_design, export_glb
 
 from .params import P
 

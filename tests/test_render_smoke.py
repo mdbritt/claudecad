@@ -6,8 +6,8 @@ from pathlib import Path
 import pytest
 from build123d import Torus
 
-from tools.export import export_glb
-from tools.render import DEFAULT_BLENDER, render_glb
+from claudecad.export import export_glb
+from claudecad.render import DEFAULT_BLENDER, render_glb
 
 _blender = os.environ.get("BLENDER_BIN", DEFAULT_BLENDER)
 pytestmark = pytest.mark.skipif(

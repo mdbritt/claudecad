@@ -9,15 +9,16 @@ Parametric designs live in `designs/<name>/` as `params.py` (every dimension,
 mm, single source of truth) + `build.py` (composes library parts, verifies,
 writes GLB/STEP to `out/`). Domain-neutral geometry lives in `claudecad/`
 (`core/`, `verify.py`, `assembly.py`); domain packs (e.g. `jewelry/`,
-`hardware/`) hold reusable parts for a design family. `tools/` is the only
-layer that touches disk/Blender.
+`hardware/`) hold reusable parts for a design family.
+`claudecad.export`/`claudecad.render` are the only layers that touch
+disk/Blender.
 
 ## The loop
 
 1. Edit `designs/<name>/params.py` (or library code for new components).
 2. `uv run python -m designs.<name>.build` — builds, **verifies**, writes
    `out/glb/<name>.glb`, and (only if verification passes) `out/step/<name>.step`.
-3. `uv run python tools/render.py out/glb/<name>.glb --outdir out/renders/<name>`
+3. `uv run claudecad render out/glb/<name>.glb --outdir out/renders/<name>`
 4. View every PNG with the Read tool. Judge against reference photos of the
    real-world piece — fetch references, don't design from memory.
 5. Iterate 1–4 until the renders read true. Then hand `out/step/<name>.step`
@@ -107,7 +108,7 @@ layer that touches disk/Blender.
 
 ## Blender renderer
 
-`tools/render.py` needs Blender; default binary is
+`claudecad render` needs Blender; default binary is
 "/Applications/Blender 4.5 LTS.app/Contents/MacOS/Blender", override with
 env `BLENDER_BIN`. Views: persp, top, front, detail. Renders are optional
 for library development (CI runs without Blender); they are required for

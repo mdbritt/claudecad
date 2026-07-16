@@ -7,6 +7,9 @@ dependencies = ["build123d>=0.11,<0.12", "numpy>=1.26"]
 license = "Apache-2.0"
 authors = [{ name = "Mike Britt" }]
 
+[project.scripts]
+claudecad = "claudecad.cli:main"
+
 [dependency-groups]
 dev = ["pytest>=8"]
 

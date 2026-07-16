@@ -5,7 +5,7 @@ import sys
 
 from claudecad.jewelry.chains import closed_loop
 from claudecad.verify import check_chain
-from tools.export import export_design, export_glb
+from claudecad.export import export_design, export_glb
 
 from .params import CHAIN, TARGET_CIRCUMFERENCE
 
