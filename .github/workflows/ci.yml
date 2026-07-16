@@ -15,3 +15,25 @@ jobs:
           enable-cache: true
       - run: uv sync --locked
       - run: uv run pytest -q
+
+  clean-room:
+    # the distribution gate: install ONLY the wheel in an empty venv,
+    # scaffold a project, and run its verification gate end-to-end
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv build
+      - name: scaffold and build in a clean venv
+        run: |
+          WHEEL=$(ls "$PWD"/dist/*.whl)
+          mkdir -p /tmp/cleanroom && cd /tmp/cleanroom
+          uv venv
+          uv pip install --python .venv/bin/python "$WHEEL"
+          .venv/bin/claudecad new demo
+          cd demo
+          ../.venv/bin/python -m designs.demo.build
+          test -f out/step/demo.step
+          test -f .claude/skills/cad/SKILL.md
