@@ -14,8 +14,8 @@ import sys
 from claudecad.hardware.snapbox import (
     BLOCKED_BY_DEG, HINGE_AXIS, NEG_CENTER_OFFSET, OPEN_FREE_MAX_DEG,
     OVERTRAVEL_SPAN_DEG, OVERTRAVEL_STATIONS, RETENTION_SPAN_DEG,
-    RETENTION_STATIONS, SWING_STATIONS, _rot_about, base, hinge_pin, lid,
-    pin_escape_distance,
+    RETENTION_STATIONS, SWING_STATIONS, _rot_about, base, base_through_bored,
+    hinge_pin, lid, pin_escape_distance,
 )
 from claudecad.verify import (
     check_solid, clearance, intersection_volume, path_clearance,
@@ -96,6 +96,12 @@ def main() -> int:
     print(f"pin capture +Z/+Y/+X/-X: "
           f"{' / '.join(f'{c:.2f}' for c in caps)} (all >0)")
     ok = ok and all(c > 0.0 for c in caps)
+    # free-leg control: through-bored base (blind ends removed) frees the
+    # axial escape — the blind ends are WHY the pin stays
+    free_ctrl = max(path_clearance(pin, base_through_bored(P) + l_relaxed,
+                                   (1, 0, 0), d, 7))
+    print(f"pin free-leg control (through-bored base): {free_ctrl:.6f} (==0)")
+    ok = ok and free_ctrl == 0.0
 
     # 7) negative control: displaced hinge center must fail the swing
     hc = P.hinge_center

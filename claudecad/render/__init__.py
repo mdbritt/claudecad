@@ -2,13 +2,50 @@
 from __future__ import annotations
 
 import argparse
+import glob
 import os
+import shutil
 import subprocess
 from pathlib import Path
 
-DEFAULT_BLENDER = "/Applications/Blender 4.5 LTS.app/Contents/MacOS/Blender"
 SCENE_SCRIPT = Path(__file__).parent / "blender_scene.py"
 DEFAULT_VIEWS = ("persp", "top", "front", "detail")
+
+_PLATFORM_GLOBS = (
+    "/Applications/Blender*.app/Contents/MacOS/Blender",          # macOS
+    "C:/Program Files/Blender Foundation/Blender*/blender.exe",   # Windows
+    "/usr/bin/blender",                                           # Linux
+    "/usr/local/bin/blender",
+    "/snap/bin/blender",
+    "/opt/blender*/blender",
+)
+
+
+def find_blender() -> str:
+    """Resolve the Blender binary. Order: BLENDER_BIN (strict — an explicit
+    setting that isn't executable is an error, never silently ignored), then
+    PATH, then platform-typical install locations (sorted for a
+    deterministic pick, NOT newest-first — set BLENDER_BIN to choose a
+    specific version), else a how-to-fix error."""
+    env = os.environ.get("BLENDER_BIN")
+    if env:
+        if shutil.which(env) or (Path(env).is_file()
+                                 and os.access(env, os.X_OK)):
+            return env
+        raise FileNotFoundError(
+            f"BLENDER_BIN={env!r} is set but is not an executable — "
+            "fix or unset it")
+    on_path = shutil.which("blender")
+    if on_path:
+        return on_path
+    for pattern in _PLATFORM_GLOBS:
+        hits = sorted(glob.glob(pattern))
+        if hits:
+            return hits[0]
+    raise FileNotFoundError(
+        "Blender not found: BLENDER_BIN is unset, no 'blender' on PATH, "
+        "and no install at the usual locations. Install Blender or set "
+        "BLENDER_BIN=/path/to/blender.")
 
 
 def render_glb(
@@ -22,7 +59,7 @@ def render_glb(
     if not glb_path.exists():
         raise FileNotFoundError(glb_path)
     outdir.mkdir(parents=True, exist_ok=True)
-    blender = os.environ.get("BLENDER_BIN", DEFAULT_BLENDER)
+    blender = find_blender()
     written = [outdir / f"{v}.png" for v in views]
     for p in written:
         p.unlink(missing_ok=True)

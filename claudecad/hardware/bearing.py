@@ -69,6 +69,12 @@ class BearingParams:
                 f"{self.rest_gap:.4f}; must be > 0 (groove must be wider "
                 "than the ball)"
             )
+        if self.osculation > 0.54:
+            raise ValueError(
+                f"osculation={self.osculation} exceeds 0.54: deep-groove "
+                "conformity runs ~0.515-0.53; a looser groove abandons "
+                "raceway guidance"
+            )
 
     @property
     def pitch_radius(self) -> float:

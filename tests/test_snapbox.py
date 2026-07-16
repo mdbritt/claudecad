@@ -145,3 +145,21 @@ def test_displaced_center_fails_swing():
                            bad_center, 0.0, p.swing_deg / 360.0,
                            SWING_STATIONS)
     assert max(vals) > 0.0
+
+
+def test_pin_axial_free_leg_control():
+    """Causality control for pin capture: the axial escape is BLOCKED by the
+    shipped blind-bored base and FREE through a through-bored variant — the
+    blind ends are WHY the pin stays (outer_race_eccentric pattern)."""
+    from claudecad.hardware.snapbox import (base_through_bored,
+                                            pin_escape_distance)
+    from claudecad.verify import path_clearance
+    p = SnapBoxParams()
+    pin = hinge_pin(p)
+    d = pin_escape_distance(p)
+    l = lid(p, "relaxed")
+    blocked = max(path_clearance(pin, base(p) + l, (1, 0, 0), d, 7))
+    free = max(path_clearance(pin, base_through_bored(p) + l, (1, 0, 0),
+                              d, 7))
+    assert blocked > 0.0
+    assert free == 0.0

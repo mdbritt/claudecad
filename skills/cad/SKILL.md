@@ -52,6 +52,9 @@ disk/Blender.
   clears; guards = the blocked motion's station intersects the guard part.
   Functional gates run in the part's LOCAL frame (rigid-invariant) and
   ALWAYS on the shipped (post-finishing) geometry.
+  Blocked-leg sweeps must sample the BLOCKING BAND densely (band-scale
+  distances — wide stations straddle a thin feature and pass on a sliver);
+  envelope-scale distances are for free legs only.
 - **Threaded / screw joint** (`hardware/fastener`): a threaded joint is
   proven by the exact 2D axial-section clearance (helical symmetry) — a
   real air gap on the true pitch, jamming under pure-axial shift and wrong

@@ -179,6 +179,18 @@ def hinge_pin(p: SnapBoxParams) -> Solid:
     return Pos(0, hc[1], hc[2]) * Rot(Y=90) * Cylinder(p.pin_d / 2, _PIN_LEN)
 
 
+def base_through_bored(p: SnapBoxParams) -> Solid:
+    """FREE-LEG CONTROL for the pin's axial capture: the shipped base with
+    the hinge bore cut clear through the outer knuckles (blind ends
+    removed). The pin's axial escape must run FREE through this variant and
+    BLOCKED through the shipped base — pinning that the blind ends are what
+    retain the pin (prove causality, not coincidence)."""
+    hc = p.hinge_center
+    span = 2 * abs(_KNUCKLE_XC_BASE[0]) + p.knuckle_w + 2.0
+    return base(p) - (Pos(0, hc[1], hc[2]) * Rot(Y=90)
+                      * Cylinder(p.bore_radius, span))
+
+
 # --- gate fixtures (one source for the design build and the tests) ---
 SWING_STATIONS = 10        # stations across the working swing
 OVERTRAVEL_SPAN_DEG = 25.0  # sweep past the open pose for the travel limit

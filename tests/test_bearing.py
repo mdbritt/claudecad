@@ -111,3 +111,10 @@ def test_eccentric_groove_fails_orbit():
     vals = screw_clearance(ball_ring(p), races_bad, AXIS, (0, 0, 0),
                            0.0, 1.0 / p.n_balls, ORBIT_STATIONS)
     assert max(vals) > 0.0
+
+
+def test_osculation_upper_bound():
+    # deep-groove conformity runs ~0.515-0.53; a looser groove abandons
+    # raceway guidance and only REST_MAX_GAP would catch it at gate time
+    with pytest.raises(ValueError, match="osculation"):
+        BearingParams(osculation=0.6)

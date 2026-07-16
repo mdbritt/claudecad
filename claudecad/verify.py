@@ -215,6 +215,15 @@ def check_chain(items: Sequence[tuple], closed: bool = False, interlock_depth: i
     return ChainReport(solids, pairs)
 
 
+def _unit_axis(axis) -> Vector:
+    """Validate and normalize a sweep axis (shared by the travel and screw
+    gates)."""
+    a = Vector(*axis) if not isinstance(axis, Vector) else axis
+    if a.length == 0:
+        raise ValueError(f"axis must be nonzero, got {tuple(a)}")
+    return a.normalized()
+
+
 def path_clearance(moving, fixed, axis, distance: float, n: int) -> list[float]:
     """Intersection volume of `moving` translated along `axis` at n stations.
 
@@ -223,10 +232,7 @@ def path_clearance(moving, fixed, axis, distance: float, n: int) -> list[float]:
     """
     if n < 2:
         raise ValueError(f"need n >= 2 stations, got {n}")
-    a = Vector(*axis) if not isinstance(axis, Vector) else axis
-    if a.length == 0:
-        raise ValueError(f"axis must be nonzero, got {tuple(a)}")
-    a = a.normalized()
+    a = _unit_axis(axis)
     out = []
     for i in range(n):
         d = distance * i / (n - 1)
@@ -247,10 +253,7 @@ def screw_clearance(moving, fixed, axis, center, lead: float, turns: float,
     """
     if n < 2:
         raise ValueError(f"need n >= 2 stations, got {n}")
-    a = Vector(*axis) if not isinstance(axis, Vector) else axis
-    if a.length == 0:
-        raise ValueError(f"axis must be nonzero, got {tuple(a)}")
-    a = a.normalized()
+    a = _unit_axis(axis)
     ad = tuple(a)
     cx, cy, cz = (float(v) for v in center)
     out = []
