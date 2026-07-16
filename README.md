@@ -58,6 +58,15 @@ laws that took real adversarial testing to establish (why twisted closed
 tubes must be built as overlapping half-loop ruled lofts; why `is_valid` is
 necessary but nowhere near sufficient).
 
+## What the gates can prove
+
+The hardware pack is the generality benchmark — three mechanism classes,
+each forcing its own verification law (all encoded in the `/cad` skill):
+
+| ![M8 bolt](docs/images/bolt.png) | ![608 bearing](docs/images/bearing-608.png) | ![snap enclosure](docs/images/snapbox.png) |
+|---|---|---|
+| **M8×1.25 bolt + nut** — thread mesh proven by the exact 2D axial-section clearance (helical symmetry): a real air gap on the true pitch, jams under axial shift and wrong pitch. | **608 ball bearing** — the 7-ball ring swept as one compound over a single 360/7° symmetry period; an eccentric-groove negative control proves the gate detects broken axisymmetry. | **Hinged snap box** — off-origin partial-arc swing gates, a same-parameter travel-limit differential (free ≤100°, blocked ≥105°), and snap retention as a two-state differential. |
+
 ## Developing claudeCAD itself
 
 ```bash
