@@ -19,7 +19,7 @@ from claudecad.verify import (
     path_clearance,
 )
 from claudecad.jewelry.finishing import diamond_cut
-from tools.export import export_design, export_glb
+from claudecad.export import export_design, export_glb
 
 from .params import (
     CHAIN, CLASP, CUT_Z, GAP_ARC_LENGTH, INTERLOCK_DEPTH, RELIEF_CLEARANCE,

@@ -17,7 +17,7 @@ from claudecad.hardware.fastener import (
     thread_mesh_gap,
 )
 from claudecad.verify import check_solid, intersection_volume
-from tools.export import export_design, export_glb
+from claudecad.export import export_design, export_glb
 
 from .params import P
 

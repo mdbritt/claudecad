@@ -1,7 +1,7 @@
 import pytest
 from build123d import Pos, Torus, import_step
 
-from tools.export import export_design, export_glb
+from claudecad.export import export_design, export_glb
 
 
 def _parts():

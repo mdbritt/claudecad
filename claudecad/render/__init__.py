@@ -1,4 +1,4 @@
-"""Drive headless Blender to render a GLB into studio PNGs."""
+"""Drive headless Blender to render a GLB into studio PNGs (claudecad render)."""
 from __future__ import annotations
 
 import argparse

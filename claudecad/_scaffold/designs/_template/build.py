@@ -9,7 +9,7 @@ import sys
 from build123d import Box
 
 from claudecad.verify import check_solid
-from tools.export import export_design, export_glb
+from claudecad.export import export_design, export_glb
 
 from .params import EXAMPLE_SIZE
 

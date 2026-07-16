@@ -1,0 +1,16 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "claudecad",
+  "description": "Verification-first parametric CAD tooling for Claude Code",
+  "owner": { "name": "Mike Britt" },
+  "plugins": [
+    {
+      "name": "claudecad",
+      "description": "The /cad design loop skill: build -> verify -> render -> export STEP. Pairs with the claudecad Python package (uv add claudecad).",
+      "author": { "name": "Mike Britt" },
+      "category": "design",
+      "source": { "source": "github", "repo": "mdbritt/claudecad" },
+      "homepage": "https://github.com/mdbritt/claudecad"
+    }
+  ]
+}

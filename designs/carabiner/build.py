@@ -17,7 +17,7 @@ from claudecad.hardware.carabiner import (
 from claudecad.verify import (
     check_solid, intersection_volume, linking_number, path_clearance,
 )
-from tools.export import export_design, export_glb
+from claudecad.export import export_design, export_glb
 
 from .params import ESCAPE_STATIONS, P
 

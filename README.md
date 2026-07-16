@@ -15,6 +15,25 @@ your already exisiting Claude Max Subscription, assuming of course, you have one
 
 ![bracelet](docs/images/bracelet-persp.png)
 
+## Use it in your project
+
+Two ways in — both end with you designing in chat while the gates verify:
+
+**Existing Claude Code project**
+
+    /plugin marketplace add mdbritt/claudecad     # in Claude Code
+    /plugin install claudecad                     # installs the /cad skill
+    uv add claudecad                              # the library
+
+**Fresh project**
+
+    uvx claudecad new mypart
+    cd mypart && uv sync
+
+Then just describe the part in chat. The `/cad` skill drives the loop:
+build → **verify** (the gates are ground truth) → render → export. STEP
+lands in `out/step/` only when verification passes.
+
 ## Why this exists
 
 LLMs are good at writing parametric geometry and bad at knowing when it's
@@ -39,7 +58,7 @@ laws that took real adversarial testing to establish (why twisted closed
 tubes must be built as overlapping half-loop ruled lofts; why `is_valid` is
 necessary but nowhere near sufficient).
 
-## Quickstart
+## Developing claudeCAD itself
 
 ```bash
 git clone https://github.com/mdbritt/claudecad && cd claudecad
@@ -54,7 +73,7 @@ View the result three ways:
   `python3 -m http.server 8123` from the repo root and open
   `http://localhost:8123/tools/step_viewer/?model=/out/step/simple_curb.step`.
 - **Renders** (needs Blender, `BLENDER_BIN` to override the default path):
-  `uv run python tools/render.py out/glb/simple_curb.glb --outdir out/renders/simple_curb`
+  `uv run claudecad render out/glb/simple_curb.glb --outdir out/renders/simple_curb`
 
 ## Using it with Claude Code
 
@@ -62,8 +81,9 @@ The repo ships a project skill (`.claude/skills/cad/SKILL.md`) that teaches
 Claude the loop and its non-negotiable rules (mm-only params, never render
 unverified geometry, never weaken a check, constructed-state mechanism
 proofs). Open the repo in Claude Code and ask for a design; the skill does
-the rest. Start a new piece from `designs/_template/` — the step-by-step
-guide is [docs/new-design-recipe.md](docs/new-design-recipe.md).
+the rest. Start a new piece with `uvx claudecad new` (in-repo contributors:
+the template lives at `claudecad/_scaffold/designs/_template/`) — the
+step-by-step guide is [docs/new-design-recipe.md](docs/new-design-recipe.md).
 
 ## What's here
 

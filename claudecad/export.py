@@ -1,4 +1,7 @@
-"""Disk export: named STEP assemblies (for Plasticity) and GLB (for rendering)."""
+"""Disk export: named STEP assemblies (for Plasticity) and GLB (for rendering).
+
+Part of the installed claudecad package — consumer projects import
+claudecad.export."""
 from __future__ import annotations
 
 import os

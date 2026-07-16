@@ -1,0 +1,10 @@
+{
+  "name": "claudecad",
+  "version": "0.1.0",
+  "description": "Verification-first parametric CAD in Claude Code: the /cad design loop (build -> verify -> render -> export STEP for Plasticity and friends).",
+  "author": { "name": "Mike Britt" },
+  "homepage": "https://github.com/mdbritt/claudecad",
+  "license": "Apache-2.0",
+  "keywords": ["cad", "build123d", "parametric", "step", "verification"],
+  "skills": "./skills/"
+}
