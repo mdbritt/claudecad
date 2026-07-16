@@ -1,17 +1,16 @@
 """End-to-end render smoke test. Runs real Blender headlessly (~30-60s)."""
-import os
-import shutil
-from pathlib import Path
-
 import pytest
 from build123d import Torus
 
 from claudecad.export import export_glb
-from claudecad.render import DEFAULT_BLENDER, render_glb
+from claudecad.render import find_blender, render_glb
 
-_blender = os.environ.get("BLENDER_BIN", DEFAULT_BLENDER)
+try:
+    _blender = find_blender()
+except FileNotFoundError:
+    _blender = None
 pytestmark = pytest.mark.skipif(
-    not (Path(_blender).exists() or shutil.which(_blender)),
+    _blender is None,
     reason="Blender not available (set BLENDER_BIN); render loop is optional",
 )
 
