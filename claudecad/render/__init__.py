@@ -24,9 +24,9 @@ _PLATFORM_GLOBS = (
 def find_blender() -> str:
     """Resolve the Blender binary. Order: BLENDER_BIN (strict — an explicit
     setting that isn't executable is an error, never silently ignored), then
-    PATH, then platform-typical install locations (sorted, so on macOS
-    'Blender 4.5 LTS.app' wins over 'Blender.app'), else a how-to-fix
-    error."""
+    PATH, then platform-typical install locations (sorted for a
+    deterministic pick, NOT newest-first — set BLENDER_BIN to choose a
+    specific version), else a how-to-fix error."""
     env = os.environ.get("BLENDER_BIN")
     if env:
         if shutil.which(env) or (Path(env).is_file()
