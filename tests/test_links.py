@@ -71,7 +71,7 @@ def test_cuban_link_is_boolean_robust_to_slab_cut():
     cut = solid & slab
     cbb = cut.bounding_box()
     assert cut.is_valid
-    assert cut.is_manifold          # seam membranes surface here if present
+    assert check_solid(cut).is_manifold  # seam membranes surface here if present
     assert cbb.max.Z - cbb.min.Z == pytest.approx(2 * cz, abs=0.01)
     assert 0 < cut.volume < solid.volume
 
