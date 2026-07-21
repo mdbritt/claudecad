@@ -85,6 +85,11 @@ disk/Blender.
   the mounting circuit — the loop must genuinely cross the other part's
   plane (a coplanar loop can never link).
 - **Clearance/fit** is measured by `verify.clearance(a, b)` — exact minimum distance, 0.0 when touching or penetrating (pair with intersection to distinguish). Near-contact fits gate via `check_chain(..., max_gap=...)`: adjacent pairs must sit within the band, not merely avoid penetration.
+- **Single parts verify functionally too**: gate them against REFERENCE
+  solids — a bar seated in a V-groove, a pin in a bore, a mating dummy —
+  using the same fit bands and free/blocked differentials (e.g. bar blocked
+  pushed down, free sliding along the groove). Proof solids may ship in the
+  GLB so the render shows the proof, but NEVER in the STEP.
 
 ## Construction laws (OCCT, hard-won — see the dated specs for evidence)
 
@@ -97,6 +102,14 @@ disk/Blender.
   necessary but NOT sufficient — boolean-robustness is what the gates test.
 - Overlapping unions in generic position are robust; coincident-face fuses
   are degenerate and forbidden.
+- Coincident faces seam CUTS too: a cutter face landing exactly on another
+  cut's edge or face makes non-manifold seams — overlap cuts ~0.5mm past
+  each other (dogfood-proven: a relief slot topping out exactly at a V apex
+  edge went non-manifold).
+- A 45°-rotated square prism closes back up above its half-diagonal — only
+  its LOWER half cuts a V. Vertical walls above the flank tops need their
+  own rectangular cut (dogfood-proven: the closing upper diamond left
+  534 mm³ of hidden interference that renders didn't show).
 
 ## Domain notes: jewelry (accumulated benchmark learnings)
 
